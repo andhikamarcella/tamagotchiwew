@@ -1,0 +1,77 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function roomDoc(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+    }
+
+    function isRoomOwner(roomId) {
+      return signedIn() && roomDoc(roomId).ownerUid == request.auth.uid;
+    }
+
+    function isRoomGuest(roomId) {
+      return signedIn() && roomDoc(roomId).guestUid == request.auth.uid;
+    }
+
+    function isRoomMember(roomId) {
+      return isRoomOwner(roomId) || isRoomGuest(roomId);
+    }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+
+    match /rooms/{roomId} {
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.inviteCode is string
+        && request.resource.data.inviteCode.size() == 6
+        && request.resource.data.status == 'waiting';
+
+      allow read: if signedIn();
+
+      allow update: if signedIn() && (
+        resource.data.ownerUid == request.auth.uid ||
+        resource.data.guestUid == request.auth.uid ||
+        (
+          resource.data.guestUid == null &&
+          request.resource.data.guestUid == request.auth.uid
+        )
+      );
+
+      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+
+      match /sharedPets/{petId} {
+        allow create: if signedIn();
+        allow read, update, delete: if isRoomMember(roomId);
+      }
+
+      match /events/{eventId} {
+        allow create: if signedIn();
+        allow read: if signedIn();
+        allow update, delete: if false;
+      }
+
+      match /presence/{uid} {
+        allow read: if signedIn();
+        allow write: if signedIn() && uid == request.auth.uid;
+      }
+
+      match /coupleQuests/{questId} {
+        allow read, write: if isRoomMember(roomId);
+      }
+
+      match /sharedInventory/{itemId} {
+        allow read, write: if isRoomMember(roomId);
+      }
+
+      match /coupleAlbum/{memoryId} {
+        allow read, write: if isRoomMember(roomId);
+      }
+    }
+  }
+}
