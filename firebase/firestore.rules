@@ -1,0 +1,118 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(roomData) {
+      return signedIn() && roomData.ownerUid == request.auth.uid;
+    }
+
+    function isGuest(roomData) {
+      return signedIn() && roomData.guestUid == request.auth.uid;
+    }
+
+    function isMember(roomData) {
+      return isOwner(roomData) || isGuest(roomData);
+    }
+
+    function roomExists(roomId) {
+      return exists(/databases/$(database)/documents/rooms/$(roomId));
+    }
+
+    function roomExistsAfter(roomId) {
+      return existsAfter(/databases/$(database)/documents/rooms/$(roomId));
+    }
+
+    function roomData(roomId) {
+      return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+    }
+
+    function roomDataAfter(roomId) {
+      return getAfter(/databases/$(database)/documents/rooms/$(roomId)).data;
+    }
+
+    function isExistingRoomMember(roomId) {
+      return signedIn() && roomExists(roomId) && isMember(roomData(roomId));
+    }
+
+    function isRoomMemberAfter(roomId) {
+      return signedIn() && roomExistsAfter(roomId) && isMember(roomDataAfter(roomId));
+    }
+
+    function validInviteCode() {
+      return request.resource.data.inviteCode is string && request.resource.data.inviteCode.size() == 6;
+    }
+
+    function validRoomStatus() {
+      return request.resource.data.status in ['waiting', 'active', 'closed'];
+    }
+
+    function validRoomCreate() {
+      return signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && request.resource.data.guestUid == null
+        && validInviteCode()
+        && validRoomStatus();
+    }
+
+    function validRoomUpdate() {
+      return signedIn()
+        && validRoomStatus()
+        && (
+          isMember(resource.data)
+          || (resource.data.guestUid == null
+            && request.resource.data.guestUid == request.auth.uid
+            && request.resource.data.status in ['active', 'waiting'])
+        );
+    }
+
+    match /users/{uid} {
+      allow read, create, update, delete: if signedIn() && uid == request.auth.uid;
+    }
+
+    match /rooms/{roomId} {
+      allow create: if validRoomCreate();
+      allow get, list: if signedIn();
+      allow update: if validRoomUpdate();
+      allow delete: if false;
+
+      match /sharedPets/{petId} {
+        allow read, create, update: if isExistingRoomMember(roomId) || isRoomMemberAfter(roomId);
+        allow delete: if false;
+      }
+
+      match /events/{eventId} {
+        allow read: if isExistingRoomMember(roomId);
+        allow create: if (isExistingRoomMember(roomId) || isRoomMemberAfter(roomId))
+          && request.resource.data.actorUid == request.auth.uid;
+        allow update, delete: if false;
+      }
+
+      match /presence/{uid} {
+        allow read: if isExistingRoomMember(roomId);
+        allow create, update: if (isExistingRoomMember(roomId) || isRoomMemberAfter(roomId))
+          && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid;
+        allow delete: if isExistingRoomMember(roomId) && uid == request.auth.uid;
+      }
+
+      match /coupleQuests/{questId} {
+        allow read, create, update: if isExistingRoomMember(roomId) || isRoomMemberAfter(roomId);
+        allow delete: if false;
+      }
+
+      match /sharedInventory/{itemId} {
+        allow read, create, update: if isExistingRoomMember(roomId) || isRoomMemberAfter(roomId);
+        allow delete: if false;
+      }
+
+      match /coupleAlbum/{memoryId} {
+        allow read, create: if isExistingRoomMember(roomId) || isRoomMemberAfter(roomId);
+        allow delete: if isExistingRoomMember(roomId) && isOwner(roomData(roomId));
+        allow update: if false;
+      }
+    }
+  }
+}
