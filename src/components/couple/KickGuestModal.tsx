@@ -1,0 +1,1 @@
+export { KickGuestModal } from './CoupleModePage';

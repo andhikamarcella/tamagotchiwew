@@ -1,0 +1,1 @@
+export { SharedActionPanel } from './CoupleModePage';

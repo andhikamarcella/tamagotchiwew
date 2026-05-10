@@ -1,0 +1,137 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function validInviteCode() {
+      return request.resource.data.inviteCode is string
+        && request.resource.data.inviteCode.size() == 6;
+    }
+
+    function validStatus() {
+      return request.resource.data.status in ['waiting', 'active', 'closed'];
+    }
+
+    function isOwner(roomData) {
+      return signedIn() && roomData.ownerUid == request.auth.uid;
+    }
+
+    function isGuest(roomData) {
+      return signedIn() && roomData.guestUid == request.auth.uid;
+    }
+
+    function isMember(roomData) {
+      return isOwner(roomData) || isGuest(roomData);
+    }
+
+    function isExistingMember(roomId) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/rooms/$(roomId))
+        && isMember(get(/databases/$(database)/documents/rooms/$(roomId)).data);
+    }
+
+    function isMemberAfter(roomId) {
+      return signedIn()
+        && existsAfter(/databases/$(database)/documents/rooms/$(roomId))
+        && (getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.ownerUid == request.auth.uid
+          || getAfter(/databases/$(database)/documents/rooms/$(roomId)).data.guestUid == request.auth.uid);
+    }
+
+    function validStatFields() {
+      return (!('hunger' in request.resource.data) || (request.resource.data.hunger is number && request.resource.data.hunger >= 0 && request.resource.data.hunger <= 100))
+        && (!('happiness' in request.resource.data) || (request.resource.data.happiness is number && request.resource.data.happiness >= 0 && request.resource.data.happiness <= 100))
+        && (!('energy' in request.resource.data) || (request.resource.data.energy is number && request.resource.data.energy >= 0 && request.resource.data.energy <= 100))
+        && (!('cleanliness' in request.resource.data) || (request.resource.data.cleanliness is number && request.resource.data.cleanliness >= 0 && request.resource.data.cleanliness <= 100))
+        && (!('health' in request.resource.data) || (request.resource.data.health is number && request.resource.data.health >= 0 && request.resource.data.health <= 100))
+        && (!('affection' in request.resource.data) || (request.resource.data.affection is number && request.resource.data.affection >= 0 && request.resource.data.affection <= 100))
+        && (!('social' in request.resource.data) || (request.resource.data.social is number && request.resource.data.social >= 0 && request.resource.data.social <= 100))
+        && (!('trust' in request.resource.data) || (request.resource.data.trust is number && request.resource.data.trust >= 0 && request.resource.data.trust <= 100));
+    }
+
+    match /rooms/{roomId} {
+      // Anonymous users can create their own casual game room.
+      allow create: if signedIn()
+        && request.resource.data.ownerUid == request.auth.uid
+        && validInviteCode()
+        && validStatus()
+        && request.resource.data.keys().hasOnly([
+          'inviteCode', 'roomName', 'ownerName', 'ownerUid', 'guestName', 'guestUid',
+          'status', 'activeSharedPetId', 'coupleBond', 'coupleXp', 'coupleLevel',
+          'coupleStreak', 'sharedCoins', 'createdAt', 'updatedAt', 'lastActivityAt'
+        ]);
+
+      // Users can read a room after they know its id/code. Subcollections still require membership.
+      allow get, list: if signedIn();
+
+      // Owner/guest can update; a new authenticated user may join only while guestUid is null.
+      allow update: if signedIn()
+        && validStatus()
+        && (
+          isMember(resource.data)
+          || (resource.data.guestUid == null
+            && request.resource.data.guestUid == request.auth.uid
+            && request.resource.data.status in ['active', 'waiting'])
+        );
+
+      allow delete: if false;
+
+      match /sharedPets/{petId} {
+        allow read: if isExistingMember(roomId);
+        allow update: if isExistingMember(roomId) && validStatFields();
+        allow create: if (isExistingMember(roomId) || isMemberAfter(roomId)) && validStatFields();
+        allow delete: if false;
+      }
+
+      match /events/{eventId} {
+        allow read: if isExistingMember(roomId);
+        allow create: if (isExistingMember(roomId) || isMemberAfter(roomId))
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.message is string
+          && request.resource.data.message.size() <= 180;
+        allow update, delete: if false;
+      }
+
+      match /presence/{uid} {
+        allow read: if isExistingMember(roomId);
+        allow create, update: if (isExistingMember(roomId) || isMemberAfter(roomId))
+          && uid == request.auth.uid
+          && request.resource.data.uid == request.auth.uid
+          && request.resource.data.nickname is string
+          && request.resource.data.nickname.size() <= 32;
+        allow delete: if isExistingMember(roomId) && uid == request.auth.uid;
+      }
+
+      match /coupleQuests/{questId} {
+        allow read: if isExistingMember(roomId);
+        allow update: if isExistingMember(roomId)
+          && (!('progress' in request.resource.data) || request.resource.data.progress is number)
+          && (!('goal' in request.resource.data) || request.resource.data.goal is number);
+        allow create: if (isExistingMember(roomId) || isMemberAfter(roomId))
+          && (!('progress' in request.resource.data) || request.resource.data.progress is number)
+          && (!('goal' in request.resource.data) || request.resource.data.goal is number);
+        allow delete: if false;
+      }
+
+      match /sharedInventory/{itemId} {
+        allow read: if isExistingMember(roomId);
+        allow update: if isExistingMember(roomId)
+          && (!('quantity' in request.resource.data) || (request.resource.data.quantity is number && request.resource.data.quantity >= 0));
+        allow create: if (isExistingMember(roomId) || isMemberAfter(roomId))
+          && (!('quantity' in request.resource.data) || (request.resource.data.quantity is number && request.resource.data.quantity >= 0));
+        allow delete: if false;
+      }
+
+      match /coupleAlbum/{memoryId} {
+        allow read: if isExistingMember(roomId);
+        allow create: if (isExistingMember(roomId) || isMemberAfter(roomId))
+          && request.resource.data.actorUid == request.auth.uid
+          && request.resource.data.caption is string
+          && request.resource.data.caption.size() <= 140;
+        allow delete: if isExistingMember(roomId) && isOwner(get(/databases/$(database)/documents/rooms/$(roomId)).data);
+        allow update: if false;
+      }
+    }
+  }
+}

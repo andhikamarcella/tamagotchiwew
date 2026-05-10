@@ -1,0 +1,1 @@
+export { CoupleRoomDashboard } from './CoupleModePage';
