@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { Firestore } from 'firebase/firestore';
-import { clearOfflineQueue, getOfflineQueue, processOfflineQueue } from '@/src/lib/offlineQueue';
+import { clearOfflineQueue, getOfflineQueue, getOfflineQueueSummary, processOfflineQueue } from '@/src/lib/offlineQueue';
 
 export type OfflineSyncStatus = 'saved' | 'saved_offline' | 'syncing' | 'synced' | 'failed' | 'online';
 
@@ -10,10 +10,12 @@ export function useOfflineSync({ isOnline, uid, db, onToast }: { isOnline: boole
   const [status, setStatus] = useState<OfflineSyncStatus>('online');
   const [pendingCount, setPendingCount] = useState(0);
   const [lastSyncedAt, setLastSyncedAt] = useState<number | null>(null);
+  const [failedCount, setFailedCount] = useState(0);
+  const [lastError, setLastError] = useState<string | null>(null);
   const syncingRef = useRef(false);
   const timerRef = useRef<number | null>(null);
 
-  const refreshCount = useCallback(() => setPendingCount(getOfflineQueue().filter((item) => !uid || !item.uid || item.uid === uid).length), [uid]);
+  const refreshCount = useCallback(() => { const summary = getOfflineQueueSummary(uid ?? undefined); setPendingCount(summary.pending); setFailedCount(summary.failed); setLastError(summary.lastType ? `${summary.lastType}${summary.lastPath ? ` at ${summary.lastPath}` : ''}` : summary.lastError ?? null); }, [uid]);
 
   useEffect(() => {
     refreshCount();
@@ -38,8 +40,9 @@ export function useOfflineSync({ isOnline, uid, db, onToast }: { isOnline: boole
       return true;
     }
     setStatus('failed');
-    if (result.permissionDenied) onToast?.('Some offline changes could not sync. Check permissions.', 'warning');
+    if (result.permissionDenied) onToast?.(`Offline sync failed because Firestore rules blocked ${result.failedType ?? 'an item'}.`, 'warning');
     else if (result.unavailable) onToast?.('Connection unavailable. Your progress is safe locally.', 'warning');
+    else if (result.invalid) onToast?.(`Offline sync paused because ${result.failedType ?? 'an item'} had invalid data.`, 'warning');
     return false;
   }, [db, isOnline, onToast, refreshCount, uid]);
 
@@ -56,5 +59,5 @@ export function useOfflineSync({ isOnline, uid, db, onToast }: { isOnline: boole
     setStatus(isOnline ? 'online' : 'saved_offline');
   }, [isOnline, refreshCount, uid]);
 
-  return { status, setStatus, pendingCount, lastSyncedAt, syncNow, clearQueue };
+  return { status, setStatus, pendingCount, failedCount, lastError, lastSyncedAt, syncNow, clearQueue };
 }

@@ -5,8 +5,20 @@ service cloud.firestore {
       return request.auth != null;
     }
 
+    function isOwner(uid) {
+      return signedIn() && request.auth.uid == uid;
+    }
+
+    function roomPath(roomId) {
+      return /databases/$(database)/documents/rooms/$(roomId);
+    }
+
     function roomDoc(roomId) {
-      return get(/databases/$(database)/documents/rooms/$(roomId)).data;
+      return get(roomPath(roomId)).data;
+    }
+
+    function roomDocAfter(roomId) {
+      return getAfter(roomPath(roomId)).data;
     }
 
     function isRoomOwner(roomId) {
@@ -21,20 +33,85 @@ service cloud.firestore {
       return isRoomOwner(roomId) || isRoomGuest(roomId);
     }
 
+    function isRoomOwnerAfter(roomId) {
+      return signedIn() && roomDocAfter(roomId).ownerUid == request.auth.uid;
+    }
+
+    function isJoiningOpenRoom() {
+      return signedIn()
+        && resource.data.guestUid == null
+        && request.resource.data.ownerUid == resource.data.ownerUid
+        && request.resource.data.inviteCode == resource.data.inviteCode
+        && request.resource.data.guestUid == request.auth.uid
+        && request.resource.data.status == 'active';
+    }
+
+    function changedOnly(keys) {
+      return request.resource.data.diff(resource.data).affectedKeys().hasOnly(keys);
+    }
+
+    function partnerCoinCredit(uid) {
+      return signedIn()
+        && request.resource.data.lastCoinTransferRoomId is string
+        && request.resource.data.lastCoinTransferActionId is string
+        && changedOnly(['coins', 'updatedAt', 'lastCoinTransferRoomId', 'lastCoinTransferActionId'])
+        && request.resource.data.coins is number
+        && resource.data.coins is number
+        && request.resource.data.coins >= resource.data.coins
+        && request.auth.uid != uid
+        && isRoomMember(request.resource.data.lastCoinTransferRoomId)
+        && (
+          roomDoc(request.resource.data.lastCoinTransferRoomId).ownerUid == uid ||
+          roomDoc(request.resource.data.lastCoinTransferRoomId).guestUid == uid
+        );
+    }
+
+    function partnerCoinCreditCreate(uid) {
+      return signedIn()
+        && request.resource.data.keys().hasOnly(['coins', 'updatedAt', 'lastCoinTransferRoomId', 'lastCoinTransferActionId'])
+        && request.resource.data.lastCoinTransferRoomId is string
+        && request.resource.data.lastCoinTransferActionId is string
+        && request.resource.data.coins is number
+        && request.resource.data.coins >= 0
+        && request.auth.uid != uid
+        && isRoomMember(request.resource.data.lastCoinTransferRoomId)
+        && (
+          roomDoc(request.resource.data.lastCoinTransferRoomId).ownerUid == uid ||
+          roomDoc(request.resource.data.lastCoinTransferRoomId).guestUid == uid
+        );
+    }
+
     match /users/{uid} {
-      allow read, write: if signedIn() && request.auth.uid == uid;
+      allow read: if isOwner(uid);
+      allow create: if isOwner(uid) || partnerCoinCreditCreate(uid);
+      allow update: if isOwner(uid) || partnerCoinCredit(uid);
+      allow delete: if isOwner(uid);
 
-      match /notificationTokens/{tokenId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
-      }
-
-      match /offlineSync/{syncId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
-      }
-
-      match /singlePlayerState/{stateId} {
-        allow read, write: if signedIn() && request.auth.uid == uid;
-      }
+      match /pets/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /inventory/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /achievements/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /activityLogs/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /dailyGoals/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /weeklyQuests/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /notifications/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /notificationTokens/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /collection/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /mailbox/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /roomDecor/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /petRequests/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /miniGameResults/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /badges/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /album/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /petMemorials/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /settings/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /saveState/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /offlineSync/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /singlePlayerState/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /usedCheatCodes/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
+      match /dailyLimits/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
+      match /pushCooldowns/{docId} { allow read: if isOwner(uid); allow create, update, delete: if false; }
+      match /friends/{friendUid} { allow read, create, update, delete: if isOwner(uid); }
+      match /friendRequests/{requestId} { allow read, create, update, delete: if isOwner(uid); }
     }
 
     match /rooms/{roomId} {
@@ -43,27 +120,19 @@ service cloud.firestore {
         && request.resource.data.inviteCode is string
         && request.resource.data.inviteCode.size() == 6
         && request.resource.data.status == 'waiting';
-
       allow read: if signedIn();
-
-      allow update: if signedIn() && (
-        resource.data.ownerUid == request.auth.uid ||
-        resource.data.guestUid == request.auth.uid ||
-        (
-          resource.data.guestUid == null &&
-          request.resource.data.guestUid == request.auth.uid
-        )
-      );
-
-      allow delete: if signedIn() && resource.data.ownerUid == request.auth.uid;
+      allow update: if isRoomMember(roomId) || isJoiningOpenRoom();
+      allow delete: if isRoomOwner(roomId);
 
       match /sharedPets/{petId} {
-        allow create: if signedIn();
+        allow create: if isRoomMember(roomId) || isRoomOwnerAfter(roomId);
         allow read, update, delete: if isRoomMember(roomId);
       }
 
       match /events/{eventId} {
-        allow create: if signedIn();
+        allow create: if signedIn()
+          && request.resource.data.actorUid == request.auth.uid
+          && (isRoomMember(roomId) || isRoomOwnerAfter(roomId));
         allow read: if signedIn();
         allow update, delete: if false;
       }
@@ -74,16 +143,37 @@ service cloud.firestore {
       }
 
       match /coupleQuests/{questId} {
-        allow read, write: if isRoomMember(roomId);
+        allow read, create, update, delete: if isRoomMember(roomId);
       }
 
       match /sharedInventory/{itemId} {
-        allow read, write: if isRoomMember(roomId);
+        allow read, create, update, delete: if isRoomMember(roomId);
       }
 
       match /coupleAlbum/{memoryId} {
-        allow read, write: if isRoomMember(roomId);
+        allow read, create, update, delete: if isRoomMember(roomId);
+      }
+
+      match /messages/{messageId} {
+        allow read: if isRoomMember(roomId);
+        allow create: if isRoomMember(roomId) && request.resource.data.senderUid == request.auth.uid;
+        allow update: if isRoomMember(roomId) && (resource.data.senderUid == request.auth.uid || isRoomOwner(roomId));
+        allow delete: if false;
+
+        match /reactions/{uid} {
+          allow read: if isRoomMember(roomId);
+          allow write: if isRoomMember(roomId) && uid == request.auth.uid && request.resource.data.uid == request.auth.uid;
+        }
+      }
+
+      match /coinTransfers/{transferId} {
+        allow read: if isRoomMember(roomId);
+        allow create: if isRoomMember(roomId) && request.resource.data.fromUid == request.auth.uid;
+        allow update, delete: if false;
       }
     }
+
+    match /globalConfig/{docId} { allow read: if true; allow write: if false; }
+    match /_debug/{docId} { allow read, write: if false; }
   }
 }
