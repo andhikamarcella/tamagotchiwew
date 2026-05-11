@@ -1,0 +1,1 @@
+export { CoupleAlbum } from './CoupleModePage';
