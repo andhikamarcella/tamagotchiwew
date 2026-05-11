@@ -1,0 +1,11 @@
+'use client';
+
+import { useFcmNotifications } from '@/src/hooks/useFcmNotifications';
+import { PixelButton } from '@/src/components/PixelButton';
+import PixelCard from '@/src/components/PixelCard';
+
+export default function NotificationSettings({ uid, onToast, compact = false }: { uid: string | null; compact?: boolean; onToast?: (message: string, type?: 'success' | 'warning' | 'info') => void }) {
+  const fcm = useFcmNotifications(uid, onToast);
+  const status = !fcm.supported ? 'Disabled' : fcm.permission === 'granted' && fcm.tokenStatus === 'saved' ? 'Enabled' : fcm.permission === 'denied' ? 'Permission denied' : 'Permission default';
+  return <PixelCard className={fcm.supported ? 'bg-white' : 'bg-slate-100'}><div className="flex flex-wrap items-start justify-between gap-2"><div><h2 className="text-sm">Push Notifications</h2><p className="mt-2 text-[10px] leading-relaxed">{fcm.supported ? 'Enable web push only when you choose. Server scheduled notifications can be added later with Cloud Functions.' : fcm.disabledReason}</p></div><span className="border-2 border-slate-950 bg-yellow-100 px-2 py-1 text-[9px]">{status}</span></div><div className="mt-3 grid gap-1 text-[9px]"><p>Permission: {fcm.permission}</p><p>FCM token: {fcm.tokenStatus === 'saved' ? 'saved' : fcm.tokenStatus === 'failed' ? 'failed' : 'not created'}</p>{fcm.error && <p className="text-red-700">{fcm.error}</p>}{fcm.tokenStatus === 'saved' && <p className="text-green-700">Push notifications ready. Server notifications can be added later.</p>}</div><div className="mt-3 flex flex-col gap-2 sm:flex-row sm:flex-wrap"><PixelButton disabled={!fcm.supported || fcm.loading || !uid} onClick={fcm.enable}>{fcm.loading ? 'Working...' : 'Enable notifications'}</PixelButton><PixelButton disabled={fcm.loading || fcm.tokenStatus !== 'saved'} onClick={fcm.disable} className="bg-white">Disable this device</PixelButton><PixelButton onClick={fcm.test} className="bg-yellow-200">Test in-app notification</PixelButton>{process.env.NODE_ENV === 'development' && fcm.token && !compact && <PixelButton onClick={() => void navigator.clipboard?.writeText(fcm.token ?? '')} className="bg-white">Copy token</PixelButton>}</div></PixelCard>;
+}

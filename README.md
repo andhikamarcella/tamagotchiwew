@@ -178,3 +178,45 @@ File `.env.example` sudah disediakan sebagai template. Jangan commit `.env.local
 - Dashboard punya scene pixel ringan, efek cuaca/habitat, animasi pet per action, dialog, daily mini goal, dan activity log.
 - Shop punya `ShopStickyWallet` sehingga coin, active pet, dan daily reward status tetap terlihat saat scroll.
 - Item shop bisa dibeli lewat detail modal, quick buy, buy 5 untuk consumable, buy & use untuk item yang bisa langsung dipakai, dan inventory mendukung use/equip/unequip.
+
+## Optional Firebase Advanced Features
+
+Pixel Paws can use optional Firebase services without making the app crash when they are not configured. Leave the flags empty/`false` to keep the related cards disabled with an explanation.
+
+### FCM Web Push
+
+1. Open **Firebase Console > Project settings > Cloud Messaging**.
+2. Generate a Web Push certificate / VAPID key.
+3. Add `NEXT_PUBLIC_FIREBASE_VAPID_KEY` in Vercel.
+4. Set `NEXT_PUBLIC_ENABLE_FCM=true` and redeploy.
+5. Users must click **Enable notifications** in Settings before the browser permission prompt appears.
+6. When granted, the web token is saved under `users/{uid}/notificationTokens/{tokenId}` in Firestore.
+7. Scheduled push reminders such as hungry pet, sleepy pet, daily reward, weekly event, or room updates require a backend/Cloud Functions later. The frontend only requests permission, stores the token, and can show foreground in-app messages when a server sends FCM.
+
+### Remote Config
+
+1. Open **Firebase Console > Remote Config**.
+2. Add these parameters as needed:
+   - `maintenance_mode`
+   - `maintenance_message`
+   - `announcement_title`
+   - `announcement_message`
+   - `weekly_event_enabled`
+   - `weekly_event_title`
+   - `shop_discount_percent`
+   - `daily_reward_multiplier`
+   - `care_xp_multiplier`
+   - `coin_reward_multiplier`
+   - `couple_mode_enabled`
+   - `guest_trial_minutes`
+   - `latest_version`
+   - `min_supported_version`
+3. Set `NEXT_PUBLIC_ENABLE_REMOTE_CONFIG=true` and redeploy.
+4. If Firebase or Remote Config is unavailable, the app falls back to safe local defaults from `src/config/defaultRemoteConfig.ts`.
+5. Values are clamped in the client: multipliers stay between `0.1` and `5`, discounts between `0` and `80`, and guest trial minutes between `1` and `60`.
+
+### Analytics and performance audits
+
+- Vercel Analytics remains the app-level analytics option via `@vercel/analytics`.
+- No Firebase Performance Monitoring panel or in-game performance dashboard is included.
+- Use PageSpeed Insights or Vercel Analytics externally for performance audits.

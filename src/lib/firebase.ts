@@ -18,6 +18,14 @@ export function isFirebaseConfigured(): boolean {
   return Object.values(firebaseConfig).every((value) => typeof value === 'string' && value.trim().length > 0);
 }
 
+export function isFcmEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_FCM === 'true' && Boolean(process.env.NEXT_PUBLIC_FIREBASE_VAPID_KEY?.trim()) && isFirebaseConfigured();
+}
+
+export function isRemoteConfigEnabled(): boolean {
+  return process.env.NEXT_PUBLIC_ENABLE_REMOTE_CONFIG === 'true' && isFirebaseConfigured();
+}
+
 export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined' || !isFirebaseConfigured()) return null;
   try {
