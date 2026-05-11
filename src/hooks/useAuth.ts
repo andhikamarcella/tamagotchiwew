@@ -33,6 +33,15 @@ import { isValidEmail, validatePassword } from '@/src/lib/validators';
 import { GUEST_SAVE_CACHE_KEY, GUEST_TRIAL_DURATION_MS, GUEST_TRIAL_EXPIRED_KEY, GUEST_TRIAL_START_KEY, computeGuestTrial, readGuestTrialExpired, readGuestTrialStart } from '@/src/lib/guestTrial';
 
 export type AuthLoadingKey = 'google' | 'microsoft' | 'emailLogin' | 'emailRegister' | 'guest' | 'resetPassword' | 'verifyEmail' | 'changeEmail' | 'reauth' | 'signOut' | null;
+export type AuthBootState = 'idle' | 'initializing' | 'checking-auth' | 'loading-profile' | 'ready' | 'signed-out' | 'error';
+
+const AUTH_BOOT_TIMEOUT_MS = 8000;
+
+function logAuthBoot(message: string, details?: unknown): void {
+  if (process.env.NODE_ENV !== 'development') return;
+  if (details === undefined) console.log(`[auth boot] ${message}`);
+  else console.log(`[auth boot] ${message}`, details);
+}
 
 type AuthActionResult = { ok: boolean; message?: string; user?: User | null };
 
@@ -95,31 +104,97 @@ export function useAuth() {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState<AuthLoadingKey>(null);
   const [authReady, setAuthReady] = useState(false);
+  const [bootState, setBootState] = useState<AuthBootState>('idle');
+  const [bootError, setBootError] = useState<string | null>(null);
+  const [bootRetryKey, setBootRetryKey] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [username, setUsername] = useState<string | null>(null);
   const [guestTrial, setGuestTrial] = useState<GuestTrialSnapshot>(() => ({ startAt: null, endsAt: null, remainingMs: GUEST_TRIAL_DURATION_MS, expired: false }));
 
   useEffect(() => {
+    let cancelled = false;
+    let timeoutId: number | null = null;
     const auth = getFirebaseAuth();
+
+    logAuthBoot('auth bootstrap started');
+    setAuthReady(false);
+    setBootError(null);
+    setBootState('initializing');
+
     if (!auth) {
+      logAuthBoot('firebase auth unavailable');
       setUser(null);
       setAuthReady(true);
+      setBootState(isFirebaseConfigured() ? 'error' : 'signed-out');
+      setBootError(isFirebaseConfigured() ? 'Firebase auth is unavailable.' : null);
       return undefined;
     }
-    return onAuthStateChanged(auth, (nextUser) => {
-      setUser(nextUser);
+
+    timeoutId = window.setTimeout(() => {
+      if (cancelled) return;
+      logAuthBoot('auth timeout reached');
       setAuthReady(true);
+      setBootState('error');
+      setBootError('This is taking longer than usual. Possible network or Firebase issue.');
+    }, AUTH_BOOT_TIMEOUT_MS);
+
+    setBootState('checking-auth');
+    const unsubscribe = onAuthStateChanged(auth, (nextUser) => {
+      if (cancelled) return;
+      logAuthBoot('auth state received', { signedIn: Boolean(nextUser), anonymous: Boolean(nextUser?.isAnonymous) });
+      setUser(nextUser);
       const trial = getGuestTrialSnapshot();
       setGuestTrial(trial);
-      if (nextUser) {
-        setUsername(nextUser.displayName ?? nextUser.email?.split('@')[0] ?? (nextUser.isAnonymous ? 'Guest Keeper' : 'Player'));
-        void syncUserProfile(nextUser, nextUser.isAnonymous ? trial : undefined).catch((profileError) => {
-          console.error('User profile sync failed:', profileError);
-          setError(getFriendlyFirebaseError(profileError));
-        });
+
+      if (!nextUser) {
+        if (timeoutId) window.clearTimeout(timeoutId);
+        setUsername(null);
+        setBootError(null);
+        setBootState('signed-out');
+        setAuthReady(true);
+        return;
       }
+
+      setBootState('loading-profile');
+      setUsername(nextUser.displayName ?? nextUser.email?.split('@')[0] ?? (nextUser.isAnonymous ? 'Guest Keeper' : 'Player'));
+      logAuthBoot('loading profile started');
+      void syncUserProfile(nextUser, nextUser.isAnonymous ? trial : undefined)
+        .then(() => {
+          if (cancelled) return;
+          logAuthBoot('loading profile success');
+          if (timeoutId) window.clearTimeout(timeoutId);
+          setBootError(null);
+          setBootState('ready');
+          setAuthReady(true);
+        })
+        .catch((profileError) => {
+          if (cancelled) return;
+          console.error('User profile sync failed:', profileError);
+          logAuthBoot('loading profile failed', profileError);
+          if (timeoutId) window.clearTimeout(timeoutId);
+          setError(getFriendlyFirebaseError(profileError));
+          setBootError('Profile sync is slow or unavailable. You can retry, sign in again, or continue once the connection recovers.');
+          setBootState('error');
+          setAuthReady(true);
+        });
+    }, (authError) => {
+      if (cancelled) return;
+      console.error('Auth state check failed:', authError);
+      logAuthBoot('auth state failed', authError);
+      if (timeoutId) window.clearTimeout(timeoutId);
+      setUser(null);
+      setError(getFriendlyFirebaseError(authError));
+      setBootError('We could not verify your session. Possible network, Firebase, or expired session issue.');
+      setBootState('error');
+      setAuthReady(true);
     });
-  }, []);
+
+    return () => {
+      cancelled = true;
+      if (timeoutId) window.clearTimeout(timeoutId);
+      unsubscribe();
+    };
+  }, [bootRetryKey]);
 
   useEffect(() => {
     setGuestTrial(getGuestTrialSnapshot());
@@ -129,6 +204,20 @@ export function useAuth() {
       setGuestTrial(next.expired ? { ...next, remainingMs: 0 } : next);
     }, 1000);
     return () => window.clearInterval(id);
+  }, []);
+
+  const retryAuthCheck = useCallback(() => {
+    setAuthReady(false);
+    setBootError(null);
+    setBootState('idle');
+    setBootRetryKey((key) => key + 1);
+  }, []);
+
+  const showSignInScreen = useCallback(() => {
+    setUser(null);
+    setAuthReady(true);
+    setBootError(null);
+    setBootState('signed-out');
   }, []);
 
   const startGuestTrial = useCallback(async (currentUser?: User | null) => {
@@ -210,6 +299,9 @@ export function useAuth() {
     if (!isFirebaseConfigured()) {
       const message = 'Firebase is not configured. Add Firebase env vars to enable online login.';
       setError(message);
+      setBootError(message);
+      setBootState('error');
+      setAuthReady(true);
       return { ok: false, message };
     }
 
@@ -219,10 +311,16 @@ export function useAuth() {
       const nextUser = await action();
       if (nextUser) {
         setUser(nextUser);
+        setBootState('loading-profile');
         await syncUserProfile(nextUser, nextUser.isAnonymous ? getGuestTrialSnapshot() : undefined).catch((profileError) => {
           console.error('User profile sync failed:', profileError);
           setError('Login succeeded, but profile sync failed.');
         });
+      }
+      if (nextUser) {
+        setBootError(null);
+        setBootState('ready');
+        setAuthReady(true);
       }
       if (nextUser && !nextUser.isAnonymous) void migrateGuestToPermanentAccount(nextUser);
       return { ok: true, user: nextUser };
@@ -415,6 +513,10 @@ export function useAuth() {
     user,
     loading,
     authReady,
+    bootState,
+    bootError,
+    retryAuthCheck,
+    showSignInScreen,
     error,
     providerLoading: {
       google: loading === 'google',
@@ -460,5 +562,5 @@ export function useAuth() {
     sendResetEmail,
     signInAsGuest,
     signOutUser,
-  }), [authReady, error, guestTrial, loading, markGuestTrialExpired, migrateGuestToPermanentAccount, registerWithEmail, sendResetEmail, signInAsGuest, signInWithEmail, signInWithGoogle, signInWithMicrosoft, signOutUser, startGuestTrial, sendVerificationEmail, refreshEmailVerification, requestEmailChange, reauthenticateWithPassword, reauthenticateWithProvider, updateUsername, upgradeGuestWithEmail, upgradeGuestWithGoogle, upgradeGuestWithMicrosoft, user, username]);
+  }), [authReady, bootError, bootState, error, guestTrial, loading, markGuestTrialExpired, migrateGuestToPermanentAccount, registerWithEmail, sendResetEmail, retryAuthCheck, showSignInScreen, signInAsGuest, signInWithEmail, signInWithGoogle, signInWithMicrosoft, signOutUser, startGuestTrial, sendVerificationEmail, refreshEmailVerification, requestEmailChange, reauthenticateWithPassword, reauthenticateWithProvider, updateUsername, upgradeGuestWithEmail, upgradeGuestWithGoogle, upgradeGuestWithMicrosoft, user, username]);
 }
