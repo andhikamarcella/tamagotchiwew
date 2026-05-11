@@ -1,0 +1,2 @@
+'use client';
+export default function ShopStickyWallet({ coins, petName, dailyReady }: { coins: number; petName?: string | null; dailyReady?: boolean }) { return <div className="sticky top-0 z-20 border-4 border-slate-950 bg-white p-3 text-[10px] shadow-[3px_3px_0_#111]"><div className="flex flex-wrap justify-between gap-2"><span>🪙 {coins.toLocaleString()}</span><span>{petName ?? 'No pet'}</span><span>{dailyReady ? 'Daily ready' : 'Daily claimed'}</span></div></div>; }

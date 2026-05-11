@@ -1,0 +1,3 @@
+'use client';
+import type { ExtendedPetAnimationType } from '@/src/hooks/usePetAnimation';
+export default function PetActionEffects({ animation, reducedMotion }: { animation: ExtendedPetAnimationType; reducedMotion?: boolean }) { if (reducedMotion || animation === 'idle') return null; const icons: Record<string, string> = { eat: '🍽️', snack: '🍬', play: '🎾', clean: '🫧', medicine: '✚', pet: '💖', walk: '🐾', train: '✨', sleep: 'Zzz', wake: '☀️', levelUp: '⬆️', findItem: '🎁', buyItem: '🪙', evolve: '🌟' }; return <div className="pointer-events-none absolute inset-0 z-20 grid place-items-center"><div className="animate-sparkle-float text-4xl drop-shadow">{icons[animation] ?? '✨'}</div></div>; }

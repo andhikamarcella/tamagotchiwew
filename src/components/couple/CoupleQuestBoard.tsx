@@ -1,0 +1,1 @@
+export { CoupleQuestBoard } from './CoupleModePage';
