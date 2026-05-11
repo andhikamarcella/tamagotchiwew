@@ -1,0 +1,1 @@
+export { RoomActivityFeed } from './CoupleModePage';

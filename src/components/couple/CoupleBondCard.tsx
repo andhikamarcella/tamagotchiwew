@@ -1,0 +1,1 @@
+export { CoupleBondCard } from './CoupleModePage';
