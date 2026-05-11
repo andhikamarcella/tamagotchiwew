@@ -1,13 +1,11 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import CoupleModePage from '@/src/components/couple/CoupleModePage';
-import LoginPage from '@/src/components/LoginPage';
+import dynamic from 'next/dynamic';
 import GuestTrialBadge from '@/src/components/auth/GuestTrialBadge';
 import TrialExpiredGate from '@/src/components/auth/TrialExpiredGate';
 import AccountBar from '@/src/components/auth/AccountBar';
-import ChangelogModal, { LAST_SEEN_VERSION_KEY } from '@/src/components/game/ChangelogModal';
-import AnnouncementModal from '@/src/components/game/AnnouncementModal';
+import { LAST_SEEN_VERSION_KEY } from '@/src/components/game/ChangelogModal';
 import AnnouncementCenter, { SEEN_ANNOUNCEMENTS_KEY } from '@/src/components/game/AnnouncementCenter';
 import VersionBadge from '@/src/components/game/VersionBadge';
 import PixelModal from '@/src/components/PixelModal';
@@ -23,6 +21,10 @@ import type { CareAction, CareOption, PetAnimationType } from '@/src/types/care'
 import { GUEST_SAVE_CACHE_KEY } from '@/src/lib/guestTrial';
 import { GAME_VERSION, ANNOUNCEMENTS } from '@/src/config/gameMeta';
 import { applyOfflineProgress } from '@/src/lib/offlineProgress';
+
+const CoupleModePage = dynamic(() => import('@/src/components/couple/CoupleModePage'), { loading: () => <section className="pixel-border bg-white p-3 text-[10px]">Loading Couple Mode...</section> });
+const ChangelogModal = dynamic(() => import('@/src/components/game/ChangelogModal'));
+const AnnouncementModal = dynamic(() => import('@/src/components/game/AnnouncementModal'));
 
 const SAVE_KEY = 'pixel-pals-save-v1';
 const LOG_KEY = 'pixel-paws-activity-log';
@@ -44,8 +46,9 @@ const actionCards: Array<{ key: CareAction; label: string; icon: string; descrip
 type ShopTab = ItemCategory | 'Snacks' | 'Medicine' | 'Special';
 type ShopCatalogItem = { id: string; name: string; category: ShopTab; price: number; emoji: string; description: string; effect: string; source: 'shop' | 'care'; careOption?: CareOption; statEffects?: Partial<Stats> };
 
-function PixelButton({ children, onClick, disabled, tone = 'bg-[var(--accent)]', type = 'button' }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; tone?: string; type?: 'button' | 'submit' }) {
-  return <button type={type} onClick={onClick} disabled={disabled} className={`pixel-border-sm ${tone} w-full px-3 py-2 text-[10px] leading-relaxed text-slate-950 transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto`}>{children}</button>;
+function PixelButton({ children, onClick, disabled, tone = 'bg-[var(--accent)]', type = 'button', sfx = 'buttonPress' }: { children: React.ReactNode; onClick?: () => void; disabled?: boolean; tone?: string; type?: 'button' | 'submit'; sfx?: string }) {
+  const press = () => { void import('@/src/lib/audioEngine').then((engine) => engine.playSfx(disabled ? 'buttonDisabled' : sfx)).catch(() => undefined); if (!disabled) onClick?.(); };
+  return <button type={type} onClick={press} disabled={disabled} className={`pixel-border-sm ${tone} w-full px-3 py-2 text-[10px] leading-relaxed text-slate-950 transition active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-50 sm:w-auto`}>{children}</button>;
 }
 function PixelCard({ children, className = '' }: { children: React.ReactNode; className?: string }) { return <section className={`pixel-border min-w-0 max-w-full overflow-hidden break-words bg-[var(--panel)] p-3 sm:p-4 ${className}`}>{children}</section>; }
 function StatBar({ label, value, color }: { label: string; value: number; color: string }) {
@@ -114,6 +117,8 @@ export default function PixelPalsApp() {
   const updateSave = useCallback((fn: (s: SaveData) => SaveData) => setSave((prev) => ({ ...fn(prev), lastUpdatedAt: Date.now() })), []);
   const updateActivePet = useCallback((fn: (p: Pet) => Pet) => updateSave((s) => ({ ...s, pets: s.pets.map((p) => p.id === s.activePetId ? fn(p) : p) })), [updateSave]);
   const requireTrialAccess = useCallback((message = 'Login to continue playing.') => { if (!auth.isGuest || !auth.isGuestTrialExpired) return true; notify(message, 'warning'); void auth.markGuestTrialExpired(); return false; }, [auth, notify]);
+  const playSfx = useCallback((name: string) => { if (!save.settings.sound) return; void import('@/src/lib/audioEngine').then((engine) => engine.playSfx(name)).catch(() => undefined); }, [save.settings.sound]);
+  const playPetVoice = useCallback((pet: Pet, nextMood: Mood = mood) => { if (!save.settings.sound) return; void import('@/src/lib/audioEngine').then((engine) => engine.playAnimalSound(pet.animalId, nextMood)).catch(() => undefined); }, [mood, save.settings.sound]);
 
   useEffect(() => {
     const parsed = safeParseSave(window.localStorage.getItem(SAVE_KEY));
@@ -132,8 +137,8 @@ export default function PixelPalsApp() {
     if (summary) setDialog(summary);
     setLoaded(true);
   }, []);
-  useEffect(() => { if (loaded) window.localStorage.setItem(SAVE_KEY, JSON.stringify(save)); }, [loaded, save]);
-  useEffect(() => { if (loaded && auth.isGuest) window.localStorage.setItem(GUEST_SAVE_CACHE_KEY, JSON.stringify(save)); }, [auth.isGuest, loaded, save]);
+  useEffect(() => { if (!loaded) return undefined; const id = window.setTimeout(() => window.localStorage.setItem(SAVE_KEY, JSON.stringify(save)), 700); return () => window.clearTimeout(id); }, [loaded, save]);
+  useEffect(() => { if (!loaded || !auth.isGuest) return undefined; const id = window.setTimeout(() => window.localStorage.setItem(GUEST_SAVE_CACHE_KEY, JSON.stringify(save)), 900); return () => window.clearTimeout(id); }, [auth.isGuest, loaded, save]);
   useEffect(() => { if (auth.isGuest && !auth.isGuestTrialExpired && auth.guestTrialRemainingMs <= 0) void auth.markGuestTrialExpired(); }, [auth]);
   useEffect(() => { if (loaded) window.localStorage.setItem(LOG_KEY, JSON.stringify(logs)); }, [loaded, logs]);
   useEffect(() => { return () => { if (animationTimer.current) window.clearTimeout(animationTimer.current); }; }, []);
@@ -143,7 +148,7 @@ export default function PixelPalsApp() {
   useEffect(() => { if (!loaded || auth.isGuestTrialExpired) return; const newly = getUnlockedAchievements(save); if (!newly.length) return; setSave((s) => ({ ...s, achievements: [...s.achievements, ...newly], userCoins: s.userCoins + newly.reduce((sum, id) => sum + (achievements.find((a) => a.id === id)?.reward ?? 0), 0) })); newly.forEach((id) => notify(`Achievement unlocked! ${achievements.find((a) => a.id === id)?.title ?? id}`, 'success')); }, [auth.isGuestTrialExpired, loaded, save, notify]);
 
   const adopt = (animalId = selectedAnimal, name = petName) => { if (!requireTrialAccess()) return; const pet = newPet(animalId, name || getAnimal(animalId).species); updateSave((s) => ({ ...s, pets: [...s.pets, pet], activePetId: pet.id, unlockedAnimals: Array.from(new Set([...s.unlockedAnimals, animalId])) })); setPage('Pet'); notify('Pet adopted!', 'success'); pushLog(`Adopted ${pet.customName}.`); };
-  const performCare = (option: CareOption) => { if (!requireTrialAccess()) return; if (!activePet) return; const resolved = applyCareOption(activePet, option, save.inventory, save.userCoins); if (!resolved.result.ok) { notify(resolved.result.reason ?? 'Action unavailable', 'warning'); return; } updateSave((s) => ({ ...s, userCoins: resolved.coins, inventory: resolved.inventory, pets: s.pets.map((p) => p.id === activePet.id ? resolved.pet : p) })); setDialog(resolved.result.dialog); notify(resolved.result.toast, 'success'); pushLog(resolved.result.log); triggerAnimation(resolved.result.levelUp ? 'levelUp' : resolved.result.petAnimation); setActiveAction(null); if (resolved.result.levelUp) notify('Level up!', 'success'); };
+  const performCare = (option: CareOption) => { if (!requireTrialAccess()) return; if (!activePet) return; const resolved = applyCareOption(activePet, option, save.inventory, save.userCoins); if (!resolved.result.ok) { notify(resolved.result.reason ?? 'Action unavailable', 'warning'); return; } updateSave((s) => ({ ...s, userCoins: resolved.coins, inventory: resolved.inventory, pets: s.pets.map((p) => p.id === activePet.id ? resolved.pet : p) })); setDialog(resolved.result.dialog); notify(resolved.result.toast, 'success'); pushLog(resolved.result.log); triggerAnimation(resolved.result.levelUp ? 'levelUp' : resolved.result.petAnimation); playSfx(resolved.result.levelUp ? 'levelUp' : resolved.result.petAnimation); playPetVoice(resolved.pet, getMood(resolved.pet)); setActiveAction(null); if (resolved.result.levelUp) notify('Level up!', 'success'); };
 
   const shopCatalog = useMemo<ShopCatalogItem[]>(() => {
     const base = shopItems.map((item) => ({ id:item.id, name:item.name, category:item.category as ShopTab, price:item.price, emoji:item.emoji, description:item.description, effect:item.effect, source:'shop' as const, statEffects:item.statEffects }));
@@ -161,24 +166,23 @@ export default function PixelPalsApp() {
         const resolved = applyCareOption(activePet, { ...item.careOption, itemId:item.id, coinCost:0, consumesItem:true, isFreeDaily:false }, tempInventory, save.userCoins - total);
         if (!resolved.result.ok) { notify(resolved.result.reason ?? 'Cannot use now', 'warning'); return; }
         updateSave((s) => ({ ...s, userCoins: resolved.coins, inventory: resolved.inventory, pets: s.pets.map((p) => p.id === activePet.id ? resolved.pet : p) }));
-        notify(`Bought & used ${item.name}!`, 'success'); pushLog(`Bought & used ${item.name}.`); setDialog(resolved.result.dialog); triggerAnimation(resolved.result.petAnimation); return;
+        notify(`Bought & used ${item.name}!`, 'success'); pushLog(`Bought & used ${item.name}.`); setDialog(resolved.result.dialog); triggerAnimation(resolved.result.petAnimation); playSfx('itemBuy'); playPetVoice(resolved.pet, getMood(resolved.pet)); return;
       }
       if (item.statEffects) {
         updateSave((s) => ({ ...s, userCoins: Math.max(0, s.userCoins - total), pets: s.pets.map((p) => p.id === activePet.id ? levelPet(applyStats(p, item.statEffects ?? {})).pet : p) }));
-        notify(`Bought & used ${item.name}!`, 'success'); pushLog(`Bought & used ${item.name}.`); triggerAnimation(item.category === 'Food' ? 'eat' : 'play'); return;
+        notify(`Bought & used ${item.name}!`, 'success'); pushLog(`Bought & used ${item.name}.`); triggerAnimation(item.category === 'Food' ? 'eat' : 'play'); playSfx('itemBuy'); if (activePet) playPetVoice(activePet); return;
       }
     }
     updateSave((s) => ({ ...s, userCoins: Math.max(0, s.userCoins - total), inventory: addInventory(s.inventory, item.id, qty) }));
-    notify(`Bought ${qty}x ${item.name}`, 'success'); pushLog(`Bought ${qty}x ${item.name}.`); triggerAnimation('buyItem');
+    notify(`Bought ${qty}x ${item.name}`, 'success'); pushLog(`Bought ${qty}x ${item.name}.`); triggerAnimation('buyItem'); playSfx('itemBuy');
   };
-  const useInventoryItem = (inv: InventoryItem) => { if (!requireTrialAccess()) return; const catalog = shopCatalog.find((i) => i.id === inv.itemId); const item = itemById(inv.itemId); if (!activePet || inv.quantity <= 0) return; if (catalog?.careOption) { performCare({ ...catalog.careOption, itemId: inv.itemId, coinCost:0, consumesItem: true, isFreeDaily: false }); return; } if (item?.category === 'Food' || item?.category === 'Toys') { updateActivePet((p) => levelPet(applyStats(p, item.statEffects ?? { hunger: 8, happiness: 4, xp: 2 })).pet); if (item.category === 'Food') updateSave((s) => ({ ...s, inventory: s.inventory.map((i) => i.itemId === inv.itemId ? { ...i, quantity: Math.max(0, i.quantity - 1) } : i).filter((i) => i.quantity > 0) })); notify(`Used ${item.name}`, 'success'); pushLog(`Used ${item.name}.`); triggerAnimation(item.category === 'Food' ? 'eat' : 'play'); return; } if (item) { updateActivePet((p) => ({ ...p, equippedAccessory: item.category === 'Accessories' ? item.id : p.equippedAccessory, equippedHabitat: item.category === 'Habitats' ? item.id : p.equippedHabitat, equippedDecorations: item.category === 'Decorations' ? Array.from(new Set([...p.equippedDecorations, item.id])).slice(-3) : p.equippedDecorations })); updateSave((s) => ({ ...s, inventory: s.inventory.map((i) => i.itemId === inv.itemId ? { ...i, equipped:true } : i) })); notify(`Equipped ${item.name}`, 'success'); triggerAnimation('equipItem'); } };
-  const claimDaily = () => { if (!requireTrialAccess()) return; if (!dailyReady) return; const last = save.dailyReward.lastClaimDate; const diff = last ? Math.round((new Date(todayKey()).getTime() - new Date(last).getTime()) / 86400000) : 1; const streak = diff === 1 ? save.dailyReward.streak + 1 : 1; const coins = 50 + Math.min(6, streak - 1) * 15; updateSave((s) => ({ ...s, userCoins:s.userCoins + coins, dailyReward:{ lastClaimDate:todayKey(), streak } })); notify(`Daily reward claimed! +${coins}`, 'success'); pushLog(`Claimed daily reward +${coins}.`); setDailyOpen(false); };
+  const useInventoryItem = (inv: InventoryItem) => { if (!requireTrialAccess()) return; const catalog = shopCatalog.find((i) => i.id === inv.itemId); const item = itemById(inv.itemId); if (!activePet || inv.quantity <= 0) return; if (catalog?.careOption) { performCare({ ...catalog.careOption, itemId: inv.itemId, coinCost:0, consumesItem: true, isFreeDaily: false }); return; } if (item?.category === 'Food' || item?.category === 'Toys') { updateActivePet((p) => levelPet(applyStats(p, item.statEffects ?? { hunger: 8, happiness: 4, xp: 2 })).pet); if (item.category === 'Food') updateSave((s) => ({ ...s, inventory: s.inventory.map((i) => i.itemId === inv.itemId ? { ...i, quantity: Math.max(0, i.quantity - 1) } : i).filter((i) => i.quantity > 0) })); notify(`Used ${item.name}`, 'success'); pushLog(`Used ${item.name}.`); triggerAnimation(item.category === 'Food' ? 'eat' : 'play'); playSfx(item.category === 'Food' ? 'feed' : 'play'); playPetVoice(activePet); return; } if (item) { updateActivePet((p) => ({ ...p, equippedAccessory: item.category === 'Accessories' ? item.id : p.equippedAccessory, equippedHabitat: item.category === 'Habitats' ? item.id : p.equippedHabitat, equippedDecorations: item.category === 'Decorations' ? Array.from(new Set([...p.equippedDecorations, item.id])).slice(-3) : p.equippedDecorations })); updateSave((s) => ({ ...s, inventory: s.inventory.map((i) => i.itemId === inv.itemId ? { ...i, equipped:true } : i) })); notify(`Equipped ${item.name}`, 'success'); triggerAnimation('equipItem'); playSfx('itemEquip'); } };
+  const claimDaily = () => { if (!requireTrialAccess()) return; if (!dailyReady) return; const last = save.dailyReward.lastClaimDate; const diff = last ? Math.round((new Date(todayKey()).getTime() - new Date(last).getTime()) / 86400000) : 1; const streak = diff === 1 ? save.dailyReward.streak + 1 : 1; const coins = 50 + Math.min(6, streak - 1) * 15; updateSave((s) => ({ ...s, userCoins:s.userCoins + coins, dailyReward:{ lastClaimDate:todayKey(), streak } })); notify(`Daily reward claimed! +${coins}`, 'success'); pushLog(`Claimed daily reward +${coins}.`); setDailyOpen(false); playSfx('dailyReward'); };
   const exportSave = () => { const blob = new Blob([JSON.stringify(save, null, 2)], { type:'application/json' }); const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = 'pixel-paws-save.json'; a.click(); URL.revokeObjectURL(a.href); };
   const importSave = (v: string) => { if (!requireTrialAccess()) return; const parsed = safeParseSave(v); setSave(parsed); notify('Import save berhasil.', 'success'); };
 
   const firebaseConfigured = isFirebaseConfigured();
   if (firebaseConfigured && !auth.authReady) return <main className="grid min-h-screen place-items-center bg-[var(--bg)] font-pixel text-xs">Loading login...</main>;
-  if (firebaseConfigured && !auth.isAuthenticated) return <LoginPage />;
   if (!loaded) return <main className="grid min-h-screen place-items-center bg-[var(--bg)] font-pixel text-xs">Loading save...</main>;
   return <main className={`${themeClass} ${save.settings.reducedMotion ? 'reduced-motion' : ''} min-h-screen overflow-x-hidden bg-[var(--bg)] font-pixel`}><ToastProvider toasts={toasts} />{changelogOpen && <ChangelogModal onClose={() => { window.localStorage.setItem(LAST_SEEN_VERSION_KEY, GAME_VERSION); setChangelogOpen(false); }} />}{announcementOpen && <AnnouncementModal onClose={() => { window.localStorage.setItem(SEEN_ANNOUNCEMENTS_KEY, JSON.stringify(ANNOUNCEMENTS.filter((item) => item.active).map((item) => item.id))); setAnnouncementOpen(false); }} />}{auth.isGuest && !auth.isGuestTrialExpired && <div className="mx-auto w-full max-w-7xl px-2 pt-2 sm:px-3"><GuestTrialBadge remainingMs={auth.guestTrialRemainingMs} onLogin={() => void auth.signOutUser()} /></div>}{auth.isGuestTrialExpired && <TrialExpiredGate />}{tutorialOpen && <TutorialModal close={() => { window.localStorage.setItem(TUTORIAL_KEY, 'yes'); setTutorialOpen(false); }} />}{dailyOpen && <DailyRewardModal save={save} claim={claimDaily} close={() => setDailyOpen(false)} />}{confirm && <ConfirmModal title="Konfirmasi Reset" body="Data yang dipilih akan dihapus dari LocalStorage." onCancel={() => setConfirm(null)} onConfirm={() => { if (confirm === 'all') { setSave(defaultSave()); window.localStorage.removeItem(SAVE_KEY); } else if (activePet) updateSave((s) => ({ ...s, pets:s.pets.filter((p) => p.id !== activePet.id), activePetId:s.pets.find((p) => p.id !== activePet.id)?.id ?? null })); setConfirm(null); }} />}{!auth.isGuestTrialExpired && activeAction && activePet && <CarePickerModal action={activeAction} pet={activePet} inventory={save.inventory} coins={save.userCoins} onClose={() => setActiveAction(null)} onPick={performCare} />}{!auth.isGuestTrialExpired && shopDetail && <ShopDetailModal item={shopDetail} coins={save.userCoins} owned={save.inventory.find((i) => i.itemId === shopDetail.id)?.quantity ?? 0} hasPet={!!activePet} onClose={() => setShopDetail(null)} onBuy={buyCatalogItem} />}
     <div className="mx-auto flex w-full max-w-7xl gap-3 p-2 pb-24 sm:p-3 md:pb-3"><Sidebar page={page} setPage={setPage} coins={save.userCoins} openDaily={() => { if (requireTrialAccess()) setDailyOpen(true); }} />

@@ -25,7 +25,7 @@ export default function AuthProviderButton({ provider, loading, disabled, onClic
     <button
       type="button"
       disabled={disabled || loading}
-      onClick={onClick}
+      onClick={() => { void import('@/src/lib/audioEngine').then((engine) => engine.playSfx(disabled ? 'buttonDisabled' : 'buttonPress')).catch(() => undefined); onClick(); }}
       className="group flex min-h-12 w-full items-center justify-center gap-3 rounded-2xl border-4 border-slate-950 bg-white px-4 py-3 font-pixel text-[11px] text-slate-950 shadow-[4px_4px_0_#0f172a] transition hover:-translate-y-0.5 hover:bg-slate-50 active:translate-x-1 active:translate-y-1 active:shadow-none disabled:cursor-not-allowed disabled:opacity-55"
     >
       {loading ? <Spinner /> : isMicrosoft ? <MicrosoftIcon /> : <GoogleIcon />}
