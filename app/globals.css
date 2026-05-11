@@ -1,0 +1,93 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root { color-scheme: light; --font-pixel: 'Pixelify Sans', system-ui, sans-serif; --font-display: var(--font-pixel); --font-ui: var(--font-pixel); --font-clean: var(--font-pixel); }
+html, body { width: 100%; min-height: 100%; overflow-x: hidden; }
+* { box-sizing: border-box; min-width: 0; }
+button, input, textarea, select { max-width: 100%; }
+
+/* Restore readable 8-bit UI sizing across laptop and mobile screens. */
+body {
+  min-height: 100vh;
+  image-rendering: pixelated;
+  font-family: var(--font-pixel), system-ui, sans-serif;
+  font-size: clamp(14px, 0.92rem + 0.18vw, 16px);
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+body, button, input, textarea, select { font-family: var(--font-pixel), system-ui, sans-serif; }
+::placeholder { font-family: var(--font-pixel), system-ui, sans-serif; }
+h1, h2, h3, h4, h5, h6,
+.font-display { font-family: var(--font-display), var(--font-pixel), system-ui, sans-serif; font-weight: 700; letter-spacing: 0.015em; }
+.font-pixel { font-family: var(--font-pixel), system-ui, sans-serif; letter-spacing: 0.02em; }
+.font-ui { font-family: var(--font-ui), var(--font-pixel), system-ui, sans-serif; }
+.font-clean { font-family: var(--font-clean), var(--font-pixel), system-ui, sans-serif; }
+button, .pixel-border, .pixel-border-sm { font-weight: 500; }
+[class~="text-[8px]"] { font-size: clamp(0.7rem, 0.64rem + 0.25vw, 0.78rem) !important; }
+[class~="text-[9px]"] { font-size: clamp(0.74rem, 0.68rem + 0.28vw, 0.84rem) !important; }
+[class~="text-[10px]"] { font-size: clamp(0.8rem, 0.72rem + 0.32vw, 0.92rem) !important; }
+[class~="text-[11px]"] { font-size: clamp(0.84rem, 0.76rem + 0.34vw, 0.96rem) !important; }
+.text-xs { font-size: clamp(0.86rem, 0.78rem + 0.32vw, 0.98rem) !important; line-height: 1.55 !important; }
+.text-sm { font-size: clamp(0.98rem, 0.88rem + 0.35vw, 1.1rem) !important; line-height: 1.55 !important; }
+
+.theme-Dark-Arcade .pixel-border,
+.theme-Dark-Arcade .pixel-border-sm { border-color: #e2e8f0 !important; box-shadow: 4px 4px 0 #64748b !important; }
+.theme-Dark-Arcade .bg-white,
+.theme-Dark-Arcade .bg-white\/95,
+.theme-Dark-Arcade .bg-white\/90,
+.theme-Dark-Arcade .bg-white\/80,
+.theme-Dark-Arcade .bg-white\/70 { color: #0f172a; }
+.theme-Dark-Arcade .bg-white .text-slate-600,
+.theme-Dark-Arcade .bg-white\/95 .text-slate-600,
+.theme-Dark-Arcade .bg-white\/90 .text-slate-600,
+.theme-Dark-Arcade .bg-white\/80 .text-slate-600,
+.theme-Dark-Arcade .bg-white\/70 .text-slate-600,
+.theme-Dark-Arcade .bg-white .text-slate-700,
+.theme-Dark-Arcade .bg-white\/95 .text-slate-700,
+.theme-Dark-Arcade .bg-white\/90 .text-slate-700,
+.theme-Dark-Arcade .bg-white\/80 .text-slate-700,
+.theme-Dark-Arcade .bg-white\/70 .text-slate-700 { color: #475569; }
+.theme-Dark-Arcade .text-slate-600,
+.theme-Dark-Arcade .text-slate-700 { color: #cbd5e1; }
+.theme-Dark-Arcade .bg-\[var\(--panel\)\] .text-slate-600,
+.theme-Dark-Arcade .bg-\[var\(--panel\)\] .text-slate-700 { color: #e2e8f0; }
+
+.pixel-border { max-width: 100%; border: 4px solid #171717; box-shadow: 4px 4px 0 #171717; }
+.pixel-border-sm { max-width: 100%; border: 3px solid #171717; box-shadow: 3px 3px 0 #171717; }
+@media (min-width: 640px) { .pixel-border { box-shadow: 6px 6px 0 #171717; } }
+.theme-Green-Retro { --bg:#bbf7d0; --panel:#ecfccb; --accent:#22c55e; --soft:#dcfce7; }
+.theme-Pink-Candy { --bg:#fbcfe8; --panel:#fdf2f8; --accent:#ec4899; --soft:#fce7f3; }
+.theme-Blue-Ocean { --bg:#bae6fd; --panel:#eff6ff; --accent:#0ea5e9; --soft:#dbeafe; }
+.theme-Yellow-Pixel { --bg:#fef08a; --panel:#fff7ed; --accent:#f59e0b; --soft:#fef3c7; }
+.theme-Dark-Arcade { --bg:#111827; --panel:#1f2937; --accent:#a78bfa; --soft:#374151; color:#f8fafc; }
+.theme-Cream-Cozy { --bg:#f5e6c8; --panel:#fff7ed; --accent:#d97706; --soft:#ffedd5; }
+.theme-Purple-Night { --bg:#312e81; --panel:#ede9fe; --accent:#8b5cf6; --soft:#ddd6fe; }
+.theme-Mint-Pixel { --bg:#a7f3d0; --panel:#f0fdfa; --accent:#14b8a6; --soft:#ccfbf1; }
+.theme-Sunset-Pet { --bg:#fed7aa; --panel:#fff7ed; --accent:#fb7185; --soft:#ffe4e6; }
+.theme-Forest-Buddy { --bg:#86efac; --panel:#f0fdf4; --accent:#16a34a; --soft:#dcfce7; }
+.theme-Snow-Day { --bg:#e0f2fe; --panel:#f8fafc; --accent:#38bdf8; --soft:#f1f5f9; }
+.theme-Retro-Gray { --bg:#d4d4d8; --panel:#f4f4f5; --accent:#71717a; --soft:#e4e4e7; }
+.theme-Neon-Lime { --bg:#bef264; --panel:#f7fee7; --accent:#84cc16; --soft:#ecfccb; }
+
+@keyframes bouncePixel { 0%,100%{ transform:translateY(0) } 50%{ transform:translateY(-8px) } }
+@keyframes wiggle { 0%,100%{ transform:rotate(0) } 25%{ transform:rotate(-4deg) } 75%{ transform:rotate(4deg) } }
+@keyframes sickShake { 0%,100%{ transform:translateX(0) } 25%{ transform:translateX(-3px) } 75%{ transform:translateX(3px) } }
+@keyframes pop { 0%{ transform:scale(.8); opacity:.2 } 100%{ transform:scale(1); opacity:1 } }
+.animate-idle { animation: bouncePixel 1.7s steps(2) infinite; }
+.animate-happy { animation: wiggle .6s steps(2) infinite; }
+.animate-sick { animation: sickShake .5s steps(2) infinite; }
+.animate-pop { animation: pop .22s steps(2); }
+.reduced-motion * { animation: none !important; transition: none !important; }
+@keyframes munch { 0%,100%{ transform:translateY(0) scale(1) } 50%{ transform:translateY(-6px) scale(1.06) } }
+@keyframes pixelWalk { 0%{ transform:translateX(-8px) } 50%{ transform:translateX(8px) } 100%{ transform:translateX(-8px) } }
+@keyframes sparkleFloat { 0%{ transform:translateY(6px); opacity:.2 } 50%{ opacity:1 } 100%{ transform:translateY(-12px); opacity:.2 } }
+@keyframes rainFall { 0%{ transform:translateY(-20px) } 100%{ transform:translateY(120px) } }
+.animate-eat { animation: munch 0.35s steps(2) infinite; }
+.animate-walk-pixel { animation: pixelWalk 0.55s steps(2) infinite; }
+.animate-sparkle-float { animation: sparkleFloat 1.2s steps(3) infinite; }
+.animate-rain-pixel { animation: rainFall 0.8s linear infinite; }
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+
+.modal-scroll-area { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
