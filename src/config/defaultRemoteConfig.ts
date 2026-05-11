@@ -13,15 +13,17 @@ export type GameRemoteConfig = {
   guest_trial_minutes: number;
   min_supported_version: string;
   latest_version: string;
+  version_label: string;
+  release_channel: string;
 };
 
 export const DEFAULT_REMOTE_CONFIG: GameRemoteConfig = {
   maintenance_mode: false,
   maintenance_message: 'Pixel Paws is getting a tiny tune-up. Please come back soon.',
-  announcement_title: 'Welcome to Pixel Paws!',
-  announcement_message: 'Care for your pet, collect memories, and invite friends.',
-  weekly_event_enabled: false,
-  weekly_event_title: 'Cozy Care Week',
+  announcement_title: 'Pixel Paws v1.0.0 Beta is Live!',
+  announcement_message: 'All 20 mini games are playable, the Beta Launch label is live, and seasonal event news is refreshed.',
+  weekly_event_enabled: true,
+  weekly_event_title: 'Beta Launch Festival',
   shop_discount_percent: 0,
   daily_reward_multiplier: 1,
   care_xp_multiplier: 1,
@@ -29,7 +31,9 @@ export const DEFAULT_REMOTE_CONFIG: GameRemoteConfig = {
   couple_mode_enabled: true,
   guest_trial_minutes: 5,
   min_supported_version: '0.1.0',
-  latest_version: '0.3.0',
+  latest_version: '1.0.0',
+  version_label: 'Beta',
+  release_channel: 'beta',
 };
 
 export type RemoteConfigStatus = 'disabled' | 'defaults' | 'loaded' | 'failed';

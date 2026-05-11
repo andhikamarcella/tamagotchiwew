@@ -49,6 +49,8 @@ export async function fetchGameRemoteConfig(): Promise<RemoteConfigSnapshot> {
       guest_trial_minutes: readNumber(remote.getValue(rc, 'guest_trial_minutes').asString(), DEFAULT_REMOTE_CONFIG.guest_trial_minutes),
       min_supported_version: remote.getValue(rc, 'min_supported_version').asString() || DEFAULT_REMOTE_CONFIG.min_supported_version,
       latest_version: remote.getValue(rc, 'latest_version').asString() || DEFAULT_REMOTE_CONFIG.latest_version,
+      version_label: remote.getValue(rc, 'version_label').asString() || DEFAULT_REMOTE_CONFIG.version_label,
+      release_channel: remote.getValue(rc, 'release_channel').asString() || DEFAULT_REMOTE_CONFIG.release_channel,
     });
     return { config: next, status: 'loaded', lastFetchAt: Date.now() };
   } catch (error) {
