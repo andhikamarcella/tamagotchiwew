@@ -1,0 +1,1 @@
+export { FirebaseSetupNotice } from './CoupleModePage';

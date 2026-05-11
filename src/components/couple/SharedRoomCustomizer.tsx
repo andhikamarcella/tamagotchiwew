@@ -1,0 +1,1 @@
+export { SharedRoomCustomizer } from './CoupleModePage';

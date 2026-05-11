@@ -1,0 +1,4 @@
+'use client';
+import type { ThemeName } from '@/lib/types';
+import { themes } from '@/src/data/themes';
+export default function ThemeSettings({ value, onChange }: { value: ThemeName; onChange: (theme: ThemeName) => void }) { return <section className="pixel-border bg-white p-3"><h2 className="mb-3 text-sm">Themes</h2><div className="grid grid-cols-1 gap-2 sm:grid-cols-2 lg:grid-cols-3">{themes.map((theme) => <button type="button" key={theme.id} onClick={() => onChange(theme.id)} className={`border-4 border-slate-950 p-3 text-left text-[10px] ${value === theme.id ? 'bg-yellow-100' : 'bg-white'}`}><div className="mb-2 flex gap-1">{theme.preview.map((color) => <span key={color} className="h-4 w-6 border-2 border-slate-950" style={{ background: color }} />)}</div><strong>{theme.name}</strong><p className="mt-1 text-[9px] text-slate-600">{theme.description}</p></button>)}</div></section>; }
