@@ -1,0 +1,6 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { clampScore, MiniGamePanel, type MiniGameRuntimeProps } from '@/src/components/minigames/MiniGameShell';
+
+export default function SnackStackGame({controls,onScore,onEnd,paused}:MiniGameRuntimeProps){const [x,setX]=useState(10),[dir,setDir]=useState(1),[stack,setStack]=useState<number[]>([50]),[score,setScore]=useState(0); useEffect(()=>{if(paused)return; const id=setInterval(()=>setX(v=>{let n=v+dir*7;if(n>85||n<5){setDir(d=>-d); n=v-dir*7} return n}),120); return()=>clearInterval(id)},[dir,paused]); const drop=()=>{const last=stack[stack.length-1]??50; if(Math.abs(x-last)>22){onEnd(score>0,score); return;} const nextStack=[...stack,x]; const next=score+12; setStack(nextStack); setScore(next); onScore(next); if(nextStack.length>=7)onEnd(true,next)}; return <MiniGamePanel controls={controls} title="🍪 Snack Stack"><button onClick={drop} className="relative h-64 w-full border-4 border-slate-950 bg-orange-100"><span className="absolute top-4 text-3xl" style={{left:`${x}%`}}>🍪</span>{stack.map((sx,i)=><span key={i} className="absolute text-3xl" style={{left:`${sx}%`,bottom:`${i*22}px`}}>🍪</span>)}</button><p className="mt-2 text-[10px]">Stack {stack.length-1}/6 · Score {score}</p></MiniGamePanel>}

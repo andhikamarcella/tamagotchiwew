@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Timestamp,
   addDoc,
@@ -9,6 +9,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   limit,
   onSnapshot,
   orderBy,
@@ -25,7 +26,7 @@ import type { QueryDocumentSnapshot } from 'firebase/firestore';
 import { auth, db, getFirebaseAuth, getFirebaseDb, isFirebaseConfigured } from '@/src/lib/firebase';
 import { getFriendlyFirebaseError } from '@/src/lib/firebaseErrors';
 import { generateInviteCode, isValidInviteCode, normalizeInviteCode } from '@/src/lib/inviteCode';
-import type { CoupleMemory, CoupleQuest, CoupleRoom, PresenceEntry, RoomEvent, SharedActionKey, SharedInventoryItem, SharedPet } from '@/src/lib/coupleTypes';
+import type { ChatMessage, CoinTransfer, CoupleMemory, CoupleQuest, CoupleRoom, PresenceEntry, RoomEvent, SharedActionKey, SharedInventoryItem, SharedPet } from '@/src/lib/coupleTypes';
 
 const NICKNAME_KEY = 'pixel-pals-couple-nickname';
 const LAST_ROOM_KEY = 'pixel-pals-couple-room-id';
@@ -100,6 +101,43 @@ function asNumber(value: unknown, fallback = 0): number {
 }
 function asBoolean(value: unknown, fallback = false): boolean {
   return typeof value === 'boolean' ? value : fallback;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+function mapChatMessage(id: string, data: Record<string, unknown>): ChatMessage {
+  const type = asString(data.type, 'text');
+  return {
+    id,
+    senderUid: asString(data.senderUid),
+    senderName: asString(data.senderName, 'Someone'),
+    senderPhotoURL: data.senderPhotoURL === null ? null : asString(data.senderPhotoURL, ''),
+    type: ['text','emoji','system','coin_transfer','gift','pet_action'].includes(type) ? type as ChatMessage['type'] : 'text',
+    text: data.text === null ? null : asString(data.text, ''),
+    emoji: data.emoji === null ? null : asString(data.emoji, ''),
+    metadata: asRecord(data.metadata),
+    reactionCounts: Object.fromEntries(Object.entries(asRecord(data.reactionCounts)).map(([key, value]) => [key, Math.max(0, asNumber(value))])),
+    createdAtMs: stampToMillis(data.createdAt),
+    editedAtMs: stampToMillis(data.editedAt),
+    deletedAtMs: stampToMillis(data.deletedAt),
+  };
+}
+function mapCoinTransfer(id: string, data: Record<string, unknown>): CoinTransfer {
+  return { id, fromUid: asString(data.fromUid), fromName: asString(data.fromName, 'Someone'), toUid: asString(data.toUid), toName: asString(data.toName, 'Partner'), amount: Math.max(0, asNumber(data.amount)), message: asString(data.message), status: 'completed', actionId: asString(data.actionId, id), createdAtMs: stampToMillis(data.createdAt) };
+}
+function sanitizeChatText(text: string): { ok: true; text: string } | { ok: false; error: string } {
+  const clean = text.trim().replace(/\s+/g, ' ');
+  if (!clean) return { ok:false, error:'Empty message blocked.' };
+  if (clean.length > 280) return { ok:false, error:'Message is too long.' };
+  if (/(.)\1{40,}/u.test(clean)) return { ok:false, error:'Please avoid repeated spam characters.' };
+  return { ok:true, text: clean };
+}
+function friendlySocialError(err: unknown): string {
+  const message = err instanceof Error ? err.message : '';
+  if (['Not enough coins.','Enter a valid amount.','You can’t send coins to yourself.','Partner not found.','Daily transfer limit reached.','Please slow down.','Empty message blocked.','Message is too long.','Please avoid repeated spam characters.'].includes(message)) return message;
+  if (message.toLowerCase().includes('permission')) return 'Permission denied. Check Firestore rules.';
+  return 'Connection issue. Please try again.';
 }
 function clamp(value: number, min = 0, max = 100): number {
   return Math.min(max, Math.max(min, Number.isFinite(value) ? value : min));
@@ -795,6 +833,203 @@ export function useRoomExit(roomId: string | null, nickname: string) {
     }
   }, [roomId, nickname, signIn]);
   return { leaveRoom, kickGuest, error };
+}
+
+
+export function useUserCoinBalance() {
+  const { signIn } = useAnonymousAuth();
+  const [coins, setCoins] = useState(0);
+  const [uid, setUid] = useState<string | null>(null);
+  useEffect(() => {
+    const firebaseAuth = getFirebaseAuth();
+    if (!firebaseAuth) return undefined;
+    return onAuthStateChanged(firebaseAuth, (user) => {
+      setUid(user?.uid ?? null);
+      if (!user) setCoins(0);
+    });
+  }, []);
+  useEffect(() => {
+    if (!db || !uid) return undefined;
+    return onSnapshot(doc(db, 'users', uid), (snap) => setCoins(Math.max(0, asNumber(snap.data()?.coins, 160))), () => setCoins(0));
+  }, [uid]);
+  const ensureUserDoc = useCallback(async () => {
+    const user = await signIn();
+    if (!user || !db) return null;
+    await setDoc(doc(db, 'users', user.uid), { displayName: user.displayName ?? '', coins, updatedAt: serverTimestamp() }, { merge: true });
+    return user;
+  }, [coins, signIn]);
+  return { uid, coins, ensureUserDoc };
+}
+
+export function useRoomMessages(roomId: string | null, nickname: string, showToast?: (message: string) => void) {
+  const { signIn } = useAnonymousAuth();
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const lastSentAtRef = useRef(0);
+  const sentWindowRef = useRef<number[]>([]);
+  const lastNotifyRef = useRef(0);
+
+  useEffect(() => {
+    if (!db || !roomId) return undefined;
+    const q = query(collection(db, 'rooms', roomId, 'messages'), orderBy('createdAt', 'desc'), limit(50));
+    return onSnapshot(q, (snap) => {
+      const next = snap.docs.map((messageDoc) => mapChatMessage(messageDoc.id, messageDoc.data())).reverse();
+      setMessages(next);
+      const latest = next[next.length - 1];
+      const user = getFirebaseAuth()?.currentUser;
+      if (latest && user && latest.senderUid !== user.uid && latest.createdAtMs && Date.now() - latest.createdAtMs < 5000 && Date.now() - lastNotifyRef.current > 2000) {
+        lastNotifyRef.current = Date.now();
+        showToast?.(`${latest.senderName}: ${latest.deletedAtMs ? 'Message deleted' : latest.text ?? latest.emoji ?? 'New message'}`);
+      }
+    }, (err) => { console.error('Chat snapshot failed:', err); setError('Connection issue. Please try again.'); });
+  }, [roomId, showToast]);
+
+  const checkRateLimit = useCallback(() => {
+    const now = Date.now();
+    sentWindowRef.current = sentWindowRef.current.filter((ts) => now - ts < 60000);
+    if (now - lastSentAtRef.current < 1500 || sentWindowRef.current.length >= 20) return false;
+    lastSentAtRef.current = now;
+    sentWindowRef.current.push(now);
+    return true;
+  }, []);
+
+  const sendMessage = useCallback(async (rawText: string, type: ChatMessage['type'] = 'text', emoji?: string) => {
+    if (!db || !roomId) return false;
+    setError(null);
+    if (!checkRateLimit()) { setError('Please slow down.'); return false; }
+    const clean = type === 'emoji' ? { ok:true as const, text: emoji ?? rawText.trim() } : sanitizeChatText(rawText);
+    if (!clean.ok) { setError(clean.error); return false; }
+    setLoading(true);
+    try {
+      const user = await signIn();
+      if (!user) throw new Error('Permission denied.');
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) throw new Error('Connection issue. Please try again.');
+      const room = mapRoom({ id: roomSnap.id, data: () => roomSnap.data() });
+      if (room.ownerUid !== user.uid && room.guestUid !== user.uid) throw new Error('Permission denied.');
+      await addDoc(collection(roomRef, 'messages'), { senderUid:user.uid, senderName:nickname, senderPhotoURL:user.photoURL ?? null, type, text:type === 'emoji' ? null : clean.text, emoji:type === 'emoji' ? clean.text : null, metadata:{}, reactionCounts:{}, createdAt:serverTimestamp(), editedAt:null, deletedAt:null });
+      return true;
+    } catch (err) {
+      console.error('Send chat failed:', err);
+      setError(friendlySocialError(err));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [checkRateLimit, nickname, roomId, signIn]);
+
+  const deleteMessage = useCallback(async (message: ChatMessage) => {
+    if (!db || !roomId) return false;
+    try {
+      const user = await signIn();
+      if (!user) throw new Error('Permission denied.');
+      const roomRef = doc(db, 'rooms', roomId);
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) throw new Error('Connection issue. Please try again.');
+      const room = mapRoom({ id: roomSnap.id, data: () => roomSnap.data() });
+      if (message.senderUid !== user.uid && room.ownerUid !== user.uid) throw new Error('Permission denied.');
+      await updateDoc(doc(roomRef, 'messages', message.id), { text:null, emoji:null, deletedAt:serverTimestamp(), editedAt:serverTimestamp() });
+      return true;
+    } catch (err) {
+      console.error('Delete message failed:', err);
+      setError(friendlySocialError(err));
+      return false;
+    }
+  }, [roomId, signIn]);
+
+  const reactToMessage = useCallback(async (messageId: string, emoji: string) => {
+    if (!db || !roomId || !emoji) return false;
+    try {
+      const user = await signIn();
+      if (!user) throw new Error('Permission denied.');
+      const messageRef = doc(db, 'rooms', roomId, 'messages', messageId);
+      const reactionRef = doc(messageRef, 'reactions', user.uid);
+      await runTransaction(db, async (transaction) => {
+        const reactionSnap = await transaction.get(reactionRef);
+        const previous = reactionSnap.exists() ? asString(reactionSnap.data().emoji) : '';
+        if (previous === emoji) {
+          transaction.delete(reactionRef);
+          transaction.update(messageRef, { [`reactionCounts.${emoji}`]: increment(-1), updatedAt: serverTimestamp() });
+          return;
+        }
+        if (previous) transaction.update(messageRef, { [`reactionCounts.${previous}`]: increment(-1) });
+        transaction.set(reactionRef, { uid:user.uid, emoji, createdAt:serverTimestamp() });
+        transaction.update(messageRef, { [`reactionCounts.${emoji}`]: increment(1), updatedAt: serverTimestamp() });
+      });
+      return true;
+    } catch (err) {
+      console.error('React failed:', err);
+      setError(friendlySocialError(err));
+      return false;
+    }
+  }, [roomId, signIn]);
+
+  return { messages, loading, error, sendMessage, deleteMessage, reactToMessage };
+}
+
+const transferLimit = { min: 1, maxPerTransfer: 500, maxPerDay: 2000 };
+export function useCoinTransfer(roomId: string | null, nickname: string) {
+  const { signIn } = useAnonymousAuth();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [transfers, setTransfers] = useState<CoinTransfer[]>([]);
+  useEffect(() => {
+    if (!db || !roomId) return undefined;
+    return onSnapshot(query(collection(db, 'rooms', roomId, 'coinTransfers'), orderBy('createdAt', 'desc'), limit(20)), (snap) => setTransfers(snap.docs.map((docSnap) => mapCoinTransfer(docSnap.id, docSnap.data()))), () => setError('Connection issue. Please try again.'));
+  }, [roomId]);
+
+  const sendCoins = useCallback(async (amountInput: number, messageInput: string) => {
+    const firestore = db;
+    if (!firestore || !roomId || loading) return false;
+    const amount = Math.floor(Number(amountInput));
+    if (!Number.isFinite(amount) || amount < transferLimit.min || amount > transferLimit.maxPerTransfer) { setError('Enter a valid amount.'); return false; }
+    const message = messageInput.trim().replace(/\s+/g, ' ').slice(0, 80);
+    const actionId = crypto.randomUUID();
+    setLoading(true);
+    setError(null);
+    try {
+      const user = await signIn();
+      if (!user) throw new Error('Permission denied.');
+      const roomRef = doc(firestore, 'rooms', roomId);
+      await runTransaction(firestore, async (transaction) => {
+        const roomSnap = await transaction.get(roomRef);
+        if (!roomSnap.exists()) throw new Error('Connection issue. Please try again.');
+        const room = mapRoom({ id: roomSnap.id, data: () => roomSnap.data() });
+        if (room.ownerUid !== user.uid && room.guestUid !== user.uid) throw new Error('Permission denied.');
+        const toUid = room.ownerUid === user.uid ? room.guestUid : room.ownerUid;
+        const toName = room.ownerUid === user.uid ? room.guestName : room.ownerName;
+        if (!toUid || !toName) throw new Error('Partner not found.');
+        if (toUid === user.uid) throw new Error('You can’t send coins to yourself.');
+        const senderRef = doc(firestore, 'users', user.uid);
+        const receiverRef = doc(firestore, 'users', toUid);
+        const dailyRef = doc(firestore, 'users', user.uid, 'dailyLimits', todayKey());
+        const transferRef = doc(roomRef, 'coinTransfers', actionId);
+        const [senderSnap, receiverSnap, dailySnap, transferSnap] = await Promise.all([transaction.get(senderRef), transaction.get(receiverRef), transaction.get(dailyRef), transaction.get(transferRef)]);
+        if (transferSnap.exists()) throw new Error('Connection issue. Please try again.');
+        const sentToday = Math.max(0, asNumber(dailySnap.data()?.coinsSentToday, 0));
+        if (sentToday + amount > transferLimit.maxPerDay) throw new Error('Daily transfer limit reached.');
+        const senderCoins = Math.max(0, asNumber(senderSnap.data()?.coins, 160));
+        const receiverCoins = Math.max(0, asNumber(receiverSnap.data()?.coins, 0));
+        if (senderCoins < amount) throw new Error('Not enough coins.');
+        transaction.set(senderRef, { coins: senderCoins - amount, updatedAt: serverTimestamp() }, { merge: true });
+        transaction.set(receiverRef, { coins: receiverCoins + amount, updatedAt: serverTimestamp() }, { merge: true });
+        transaction.set(dailyRef, { coinsSentToday: sentToday + amount, updatedAt: serverTimestamp() }, { merge: true });
+        transaction.set(transferRef, { fromUid:user.uid, fromName:nickname, toUid, toName, amount, message, status:'completed', createdAt:serverTimestamp(), actionId });
+        transaction.set(doc(roomRef, 'events', crypto.randomUUID()), { eventType:'coin_transfer', actorUid:user.uid, actorName:nickname, message:`${nickname} sent ${amount} coins to ${toName}.`, metadata:{ amount, toUid, toName }, createdAt:serverTimestamp() });
+        transaction.set(doc(roomRef, 'messages', crypto.randomUUID()), { senderUid:user.uid, senderName:nickname, senderPhotoURL:user.photoURL ?? null, type:'coin_transfer', text:`Sent ${amount} coins to ${toName}${message ? ` — ${message}` : ''}`, emoji:'🪙', metadata:{ amount, toUid, toName, actionId }, reactionCounts:{}, createdAt:serverTimestamp(), editedAt:null, deletedAt:null });
+      });
+      return true;
+    } catch (err) {
+      console.error('Coin transfer failed:', err);
+      setError(friendlySocialError(err));
+      return false;
+    } finally {
+      setLoading(false);
+    }
+  }, [loading, nickname, roomId, signIn]);
+  return { sendCoins, transfers, loading, error, limit: transferLimit };
 }
 
 export function getStoredRoomId(): string | null {

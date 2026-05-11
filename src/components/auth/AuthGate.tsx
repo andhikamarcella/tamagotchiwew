@@ -4,12 +4,51 @@ import LoginRequiredScreen from './LoginRequiredScreen';
 import { useAuth } from '@/src/hooks/useAuth';
 import { isFirebaseConfigured } from '@/src/lib/firebase';
 import { useAudioUnlock } from '@/src/hooks/useAudioUnlock';
+import AppBootScreen from '@/src/components/system/AppBootScreen';
+import AuthErrorScreen from '@/src/components/system/AuthErrorScreen';
 
 export default function AuthGate({ children }: { children: ReactNode }) {
   const auth = useAuth();
   useAudioUnlock();
-  if (!isFirebaseConfigured()) return <main className="grid min-h-screen place-items-center bg-lime-100 p-4 font-pixel text-xs"><section className="pixel-border max-w-md bg-white p-4 text-center"><h1 className="mb-2 text-sm">Firebase setup needed</h1><p className="text-[10px] leading-relaxed">Add Firebase env vars to enable login and online play.</p></section></main>;
-  if (!auth.authReady) return <main className="grid min-h-screen place-items-center bg-[var(--bg)] font-pixel text-xs">🐾 Checking login...</main>;
-  if (!auth.isAuthenticated) return <LoginRequiredScreen />;
+
+  const goToSignIn = () => {
+    auth.showSignInScreen();
+  };
+
+  const continueAsGuest = () => {
+    void auth.signInAsGuest();
+  };
+
+  if (!isFirebaseConfigured()) {
+    return (
+      <AuthErrorScreen
+        message="Firebase setup needed"
+        detail="Add Firebase environment variables to enable login and online play."
+        onRetry={auth.retryAuthCheck}
+        onSignIn={goToSignIn}
+        onContinueGuest={continueAsGuest}
+        canContinueGuest={false}
+      />
+    );
+  }
+
+  if (auth.bootState === 'error') {
+    return (
+      <AppBootScreen
+        state="error"
+        error={auth.bootError ?? auth.error}
+        onRetry={auth.retryAuthCheck}
+        onSignIn={goToSignIn}
+        onContinueGuest={continueAsGuest}
+        canContinueGuest={!auth.hasGuestTrialExpired}
+      />
+    );
+  }
+
+  if (!auth.authReady || ['idle', 'initializing', 'checking-auth', 'loading-profile'].includes(auth.bootState)) {
+    return <AppBootScreen state={auth.bootState} timedOut={false} onRetry={auth.retryAuthCheck} onSignIn={goToSignIn} onContinueGuest={continueAsGuest} canContinueGuest={!auth.hasGuestTrialExpired} />;
+  }
+
+  if (!auth.isAuthenticated || auth.bootState === 'signed-out') return <LoginRequiredScreen />;
   return <>{children}</>;
 }

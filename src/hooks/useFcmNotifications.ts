@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { disableFcmToken, getFcmFriendlyError, getFcmSupport, listenForForegroundMessages, requestAndSaveFcmToken, resetNotificationServiceWorker } from '@/src/lib/fcm';
+import { disableFcmToken, getFcmFriendlyError, getFcmSupport, listenForForegroundMessages, requestAndSaveFcmToken, requestFcmToken, resetNotificationServiceWorker } from '@/src/lib/fcm';
 import { getFirebasePublicConfigDebug } from '@/src/lib/firebase';
 
 type TokenStatus = 'not_created' | 'saved' | 'failed';
@@ -30,17 +30,16 @@ export function useFcmNotifications(uid: string | null, onToast?: (message: stri
   }, [onToast]);
 
   const enable = useCallback(async () => {
-    if (!uid) { onToast?.('Please sign in before enabling notifications.', 'warning'); return; }
     setLoading(true);
     setError(null);
     try {
-      const result = await requestAndSaveFcmToken(uid);
+      const result = uid ? await requestAndSaveFcmToken(uid) : { token: await requestFcmToken(), savedToFirestore: false };
       setToken(result.token);
       setTokenStatus('saved');
       if ('Notification' in window) setPermission(Notification.permission);
       if ('serviceWorker' in navigator) setServiceWorkerRegistered(true);
       if (result.savedToFirestore) onToast?.('Notifications enabled!', 'success');
-      else onToast?.('Token created, but cloud sync failed.', 'warning');
+      else onToast?.(uid ? 'Token created, but cloud sync failed.' : 'Notifications enabled on this device. Sign in to sync the token to cloud.', uid ? 'warning' : 'success');
     } catch (enableError) {
       const message = getFcmFriendlyError(enableError);
       setError(message);

@@ -1,0 +1,7 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { clampScore, MiniGamePanel, type MiniGameRuntimeProps } from '@/src/components/minigames/MiniGameShell';
+
+type B={id:number;x:number;y:number;t:'good'|'gold'|'heart'|'bad'}; const icon=(t:B['t'])=>t==='gold'?'✨':t==='heart'?'💖':t==='bad'?'☠️':'🫧';
+export default function BubblePopGame({ controls,onScore,onEnd,paused }: MiniGameRuntimeProps){const [bs,setBs]=useState<B[]>([]),[score,setScore]=useState(0),[miss,setMiss]=useState(0); useEffect(()=>{if(paused)return; const id=window.setInterval(()=>setBs(v=>[...v.slice(-7),{id:Date.now(),x:Math.random()*80,y:Math.random()*65,t:Math.random()<.15?'bad':Math.random()<.3?'gold':'good'}]),650); return()=>window.clearInterval(id)},[paused]); useEffect(()=>{if(miss>=5)onEnd(score>0,score)},[miss,onEnd,score]); const pop=(b:B)=>{setBs(v=>v.filter(x=>x.id!==b.id)); const next=clampScore(score+(b.t==='bad'?-10:b.t==='gold'?20:b.t==='heart'?12:5)); setScore(next); onScore(next); if(b.t==='bad')setMiss(m=>m+1)}; return <MiniGamePanel controls={controls} title="🫧 Bubble Pop"><p className="text-[10px]">Pop bubbles only. Poison bubbles cost misses.</p><div className="relative mt-3 h-64 overflow-hidden border-4 border-slate-950 bg-cyan-100">{bs.map(b=><button key={b.id} type="button" onClick={()=>pop(b)} className="absolute min-h-11 min-w-11 text-3xl" style={{left:`${b.x}%`,top:`${b.y}%`}}>{icon(b.t)}</button>)}</div><p className="mt-2 text-[10px]">Score {score} · Poison hits {miss}/5</p></MiniGamePanel>}

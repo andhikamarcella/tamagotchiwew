@@ -1,0 +1,7 @@
+'use client';
+
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { clampScore, MiniGamePanel, type MiniGameRuntimeProps } from '@/src/components/minigames/MiniGameShell';
+
+const colors=['🔴','🔵','🟢','🟡'];
+export default function PatternMemoryGame({controls,onScore,onEnd}:MiniGameRuntimeProps){const [seq,setSeq]=useState<string[]>([colors[0]!,colors[2]!]),[idx,setIdx]=useState(0),[show,setShow]=useState(true),[flash,setFlash]=useState(''),[score,setScore]=useState(0); useEffect(()=>{setShow(true); let i=0; const id=setInterval(()=>{setFlash(seq[i]??''); i++; if(i>seq.length){clearInterval(id); setFlash(''); setShow(false); setIdx(0)}},600); return()=>clearInterval(id)},[seq]); const press=(c:string)=>{if(show)return; if(c!==seq[idx]){onEnd(score>0,score); return;} if(idx===seq.length-1){const next=score+seq.length*10; setScore(next); onScore(next); if(seq.length>=6)onEnd(true,next); else {setSeq([...seq,colors[Math.floor(Math.random()*colors.length)]!]); setIdx(0)}} else setIdx(idx+1)}; return <MiniGamePanel controls={controls} title="🔁 Pattern Memory"><p className="text-[10px]">Watch the pattern, then repeat it.</p><div className="my-4 text-center text-5xl">{show?flash:'Your turn'}</div><div className="grid grid-cols-2 gap-2">{colors.map(c=><button key={c} disabled={show} onClick={()=>press(c)} className="border-4 border-slate-950 bg-white p-4 text-3xl">{c}</button>)}</div><p className="mt-2 text-[10px]">Round length {seq.length} · Score {score}</p></MiniGamePanel>}
