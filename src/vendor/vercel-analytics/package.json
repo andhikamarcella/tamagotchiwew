@@ -1,0 +1,10 @@
+{
+  "name": "@vercel/analytics",
+  "version": "1.5.0-pixel-paws-local",
+  "private": true,
+  "sideEffects": false,
+  "exports": {
+    "./next": "./next.js"
+  },
+  "types": "./next.d.ts"
+}

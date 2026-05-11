@@ -1,0 +1,1 @@
+export { CloseRoomModal } from './CoupleModePage';
