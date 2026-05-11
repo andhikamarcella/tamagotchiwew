@@ -1,28 +1,77 @@
-importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
-importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
+const PIXEL_PAWS_CACHE = "pixel-paws-offline-v1";
+const OFFLINE_URL = "/offline";
+const OFFLINE_ASSETS = ["/icon.svg", "/favicon.svg"];
 
-firebase.initializeApp({
-  apiKey: "AIzaSyCxK_SM3_h-IHtM7zyVa-K1Gu-xQfhVDYE",
-  authDomain: "pixel-paws-tamagotchi.firebaseapp.com",
-  projectId: "pixel-paws-tamagotchi",
-  storageBucket: "pixel-paws-tamagotchi.firebasestorage.app",
-  messagingSenderId: "330948794614",
-  appId: "1:330948794614:web:0e6976c060750825e1b4d7"
+function offlineHtmlResponse() {
+  return new Response(`<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>You're Offline · Pixel Paws</title><style>body{margin:0;min-height:100vh;display:grid;place-items:center;background:linear-gradient(135deg,#111827,#312e81 50%,#0f172a);font-family:'Pixelify Sans',monospace,sans-serif;color:#0f172a}.card{width:min(90vw,34rem);box-sizing:border-box;border:4px solid #0f172a;background:#fff;padding:24px;text-align:center;box-shadow:8px 8px 0 #0f172a;border-radius:28px}.paw{font-size:64px}.status{border:4px solid #0f172a;background:#fef3c7;padding:12px;margin:16px 0;font-weight:700}.btn{display:inline-block;margin:6px;border:3px solid #0f172a;background:#bef264;color:#0f172a;padding:12px 16px;text-decoration:none;box-shadow:3px 3px 0 #0f172a}p{line-height:1.6}</style></head><body><main class="card"><div class="paw">🐾</div><h1>You're Offline</h1><p>Connection lost. Pixel Paws will be ready when you're back online.</p><div class="status">Your save is safe · Reconnect to continue online features</div><p>Online features like sync, notifications, couple mode, and cloud save may be unavailable until you reconnect.</p><a class="btn" href="/">Retry Connection</a><a class="btn" href="/offline">Offline Help</a><p><small>If this is your first visit, reconnect once so the app can finish preparing offline support.</small></p></main></body></html>`, { headers: { "Content-Type": "text/html; charset=utf-8" } });
+}
+
+async function cacheOfflineShell() {
+  const cache = await caches.open(PIXEL_PAWS_CACHE);
+  await cache.put(OFFLINE_URL, offlineHtmlResponse());
+  await Promise.allSettled(OFFLINE_ASSETS.map((url) => cache.add(new Request(url, { cache: "reload" }))));
+}
+
+self.addEventListener("install", (event) => {
+  event.waitUntil(cacheOfflineShell().then(() => self.skipWaiting()));
 });
 
-const messaging = firebase.messaging();
-
-messaging.onBackgroundMessage((payload) => {
-  const title = payload.notification?.title || "Pixel Paws";
-  const options = {
-    body: payload.notification?.body || "You have a new Pixel Paws update.",
-    icon: "/icon.svg",
-    badge: "/icon.svg",
-    data: payload.data || {}
-  };
-
-  self.registration.showNotification(title, options);
+self.addEventListener("activate", (event) => {
+  event.waitUntil((async () => {
+    const keys = await caches.keys();
+    await Promise.all(keys.filter((key) => key.startsWith("pixel-paws-offline-") && key !== PIXEL_PAWS_CACHE).map((key) => caches.delete(key)));
+    await self.clients.claim();
+  })());
 });
+
+self.addEventListener("fetch", (event) => {
+  const request = event.request;
+  if (request.method !== "GET") return;
+
+  const isNavigation = request.mode === "navigate" || request.destination === "document" || (request.headers.get("accept") || "").includes("text/html");
+  if (!isNavigation) return;
+
+  event.respondWith((async () => {
+    try {
+      return await fetch(request);
+    } catch (error) {
+      const cache = await caches.open(PIXEL_PAWS_CACHE);
+      const cached = await cache.match(OFFLINE_URL) || await cache.match(new Request(OFFLINE_URL));
+      return cached || offlineHtmlResponse();
+    }
+  })());
+});
+
+try {
+  importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js");
+  importScripts("https://www.gstatic.com/firebasejs/10.14.1/firebase-messaging-compat.js");
+
+  if (self.firebase?.apps?.length === 0) {
+    self.firebase.initializeApp({
+      apiKey: "AIzaSyCxK_SM3_h-IHtM7zyVa-K1Gu-xQfhVDYE",
+      authDomain: "pixel-paws-tamagotchi.firebaseapp.com",
+      projectId: "pixel-paws-tamagotchi",
+      storageBucket: "pixel-paws-tamagotchi.firebasestorage.app",
+      messagingSenderId: "330948794614",
+      appId: "1:330948794614:web:0e6976c060750825e1b4d7"
+    });
+  }
+
+  const messaging = self.firebase.messaging();
+  messaging.onBackgroundMessage((payload) => {
+    const title = payload.notification?.title || "Pixel Paws";
+    const options = {
+      body: payload.notification?.body || "You have a new Pixel Paws update.",
+      icon: "/icon.svg",
+      badge: "/icon.svg",
+      data: payload.data || {}
+    };
+
+    self.registration.showNotification(title, options);
+  });
+} catch (error) {
+  console.warn("Pixel Paws FCM service worker features unavailable:", error);
+}
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();

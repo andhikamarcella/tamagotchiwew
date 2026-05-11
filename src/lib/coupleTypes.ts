@@ -79,6 +79,60 @@ export interface SharedInventoryItem {
   equipped: boolean;
 }
 
+
+export type ChatMessageType = 'text' | 'emoji' | 'system' | 'coin_transfer' | 'gift' | 'pet_action';
+
+export interface ChatReaction {
+  uid: string;
+  emoji: string;
+  createdAtMs: number | null;
+}
+
+export interface ChatMessage {
+  id: string;
+  senderUid: string;
+  senderName: string;
+  senderPhotoURL: string | null;
+  type: ChatMessageType;
+  text: string | null;
+  emoji: string | null;
+  metadata: Record<string, unknown>;
+  reactionCounts: Record<string, number>;
+  createdAtMs: number | null;
+  editedAtMs: number | null;
+  deletedAtMs: number | null;
+}
+
+export interface CoinTransfer {
+  id: string;
+  fromUid: string;
+  fromName: string;
+  toUid: string;
+  toName: string;
+  amount: number;
+  message: string;
+  status: 'completed';
+  actionId: string;
+  createdAtMs: number | null;
+}
+
+export interface EmojiCategory {
+  id: string;
+  label: string;
+  emojis: string[];
+}
+
+export interface QuickMessage {
+  id: string;
+  text: string;
+}
+
+export interface TransferLimit {
+  min: number;
+  maxPerTransfer: number;
+  maxPerDay: number;
+}
+
 export interface CoupleMemory {
   id: string;
   petName: string;

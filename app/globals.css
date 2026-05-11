@@ -2,7 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root { color-scheme: light; --font-pixel: 'Pixelify Sans', system-ui, sans-serif; --font-display: var(--font-pixel); --font-ui: var(--font-pixel); --font-clean: var(--font-pixel); }
+:root { color-scheme: light; --font-pixel: 'Pixelify Sans', monospace, sans-serif; --font-display: var(--font-pixel); --font-ui: var(--font-pixel); --font-clean: var(--font-pixel); }
 html, body { width: 100%; min-height: 100%; overflow-x: hidden; }
 * { box-sizing: border-box; min-width: 0; }
 button, input, textarea, select { max-width: 100%; }
@@ -11,18 +11,18 @@ button, input, textarea, select { max-width: 100%; }
 body {
   min-height: 100vh;
   image-rendering: pixelated;
-  font-family: var(--font-pixel), system-ui, sans-serif;
+  font-family: var(--font-pixel), monospace, sans-serif;
   font-size: clamp(14px, 0.92rem + 0.18vw, 16px);
   line-height: 1.55;
   text-rendering: optimizeLegibility;
 }
-body, button, input, textarea, select { font-family: var(--font-pixel), system-ui, sans-serif; }
-::placeholder { font-family: var(--font-pixel), system-ui, sans-serif; }
+body, button, input, textarea, select { font-family: var(--font-pixel), monospace, sans-serif; }
+::placeholder { font-family: var(--font-pixel), monospace, sans-serif; }
 h1, h2, h3, h4, h5, h6,
-.font-display { font-family: var(--font-display), var(--font-pixel), system-ui, sans-serif; font-weight: 700; letter-spacing: 0.015em; }
-.font-pixel { font-family: var(--font-pixel), system-ui, sans-serif; letter-spacing: 0.02em; }
-.font-ui { font-family: var(--font-ui), var(--font-pixel), system-ui, sans-serif; }
-.font-clean { font-family: var(--font-clean), var(--font-pixel), system-ui, sans-serif; }
+.font-display { font-family: var(--font-display), var(--font-pixel), monospace, sans-serif; font-weight: 700; letter-spacing: 0.015em; }
+.font-pixel { font-family: var(--font-pixel), monospace, sans-serif; letter-spacing: 0.02em; }
+.font-ui { font-family: var(--font-ui), var(--font-pixel), monospace, sans-serif; }
+.font-clean { font-family: var(--font-clean), var(--font-pixel), monospace, sans-serif; }
 button, .pixel-border, .pixel-border-sm { font-weight: 500; }
 [class~="text-[8px]"] { font-size: clamp(0.7rem, 0.64rem + 0.25vw, 0.78rem) !important; }
 [class~="text-[9px]"] { font-size: clamp(0.74rem, 0.68rem + 0.28vw, 0.84rem) !important; }
@@ -91,3 +91,46 @@ button, .pixel-border, .pixel-border-sm { font-weight: 500; }
 .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
 
 .modal-scroll-area { overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+
+.pixel-boot-bg {
+  position: relative;
+  background:
+    radial-gradient(circle at 16% 18%, rgba(244, 114, 182, 0.45), transparent 24%),
+    radial-gradient(circle at 84% 12%, rgba(125, 211, 252, 0.38), transparent 26%),
+    radial-gradient(circle at 50% 100%, rgba(190, 242, 100, 0.26), transparent 30%),
+    linear-gradient(135deg, #111827 0%, #312e81 48%, #0f172a 100%);
+}
+.pixel-boot-bg::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.18;
+  background-image: linear-gradient(rgba(255,255,255,.22) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,.18) 1px, transparent 1px);
+  background-size: 18px 18px;
+}
+.pixel-boot-bg::after {
+  content: '🐱';
+  position: absolute;
+  right: clamp(1rem, 6vw, 5rem);
+  bottom: clamp(1rem, 7vw, 4rem);
+  font-size: clamp(2rem, 8vw, 5rem);
+  filter: drop-shadow(4px 4px 0 rgba(15, 23, 42, .7));
+  animation: pixelFloat 2.8s steps(3) infinite;
+}
+@keyframes pawBounce { 0%, 100% { transform: translateY(0) rotate(0deg); } 50% { transform: translateY(-10px) rotate(-6deg); } }
+@keyframes pixelBlink { 0%, 45% { opacity: 1; } 46%, 100% { opacity: .25; } }
+@keyframes loadingDots { 0% { width: .4rem; } 50% { width: 1.5rem; } 100% { width: 2.2rem; } }
+@keyframes pixelProgress { 0% { transform: translateX(-100%); } 100% { transform: translateX(160%); } }
+@keyframes pixelFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-12px); } }
+.animate-paw-bounce { animation: pawBounce 0.9s steps(2) infinite; }
+.animate-pixel-blink { animation: pixelBlink 1s steps(2) infinite; }
+.animate-loading-dots { overflow: hidden; vertical-align: bottom; animation: loadingDots 1.2s steps(3) infinite; }
+.animate-pixel-progress { animation: pixelProgress 1.5s steps(6) infinite; }
+@media (prefers-reduced-motion: reduce) {
+  .pixel-boot-bg::after,
+  .animate-paw-bounce,
+  .animate-pixel-blink,
+  .animate-loading-dots,
+  .animate-pixel-progress { animation: none !important; }
+}

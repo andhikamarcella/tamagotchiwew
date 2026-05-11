@@ -1,0 +1,14 @@
+import type { EventConfig } from '@/lib/types';
+
+export const seasonalEvents: EventConfig[] = [
+  { id:'night_festival', title:'Night Festival', description:'Lanterns, fireflies, masks, and cozy night rewards.', theme:{ from:'#1e1b4b', to:'#facc15', accent:'#fde68a' }, shopItems:['special-0','special-8','special-9','special-11'], miniGames:['star-catcher','pet-dance-timing'], bonusMultiplier:1.2, badgeReward:'Festival Friend', announcement:'Night Festival is live with lantern specials!' },
+  { id:'summer_beach', title:'Summer Beach', description:'Surfboards, umbrellas, and sunny beach play.', theme:{ from:'#0ea5e9', to:'#fde047', accent:'#67e8f9' }, shopItems:['special-1','special-10'], miniGames:['fishing-pond','coin-rain'], bonusMultiplier:1.2, badgeReward:'Summer Buddy', announcement:'Summer Beach brings sunny rewards.' },
+  { id:'ramadan', title:'Ramadan Cozy Nights', description:'Moon rugs, warm soup, and calm care bonuses.', theme:{ from:'#064e3b', to:'#facc15', accent:'#bbf7d0' }, shopItems:['special-2'], miniGames:['simon-says'], bonusMultiplier:1.15, badgeReward:'Eid Blessing Badge', announcement:'Ramadan cozy items are available as seasonal previews.' },
+  { id:'eid', title:'Eid Celebration', description:'Gift boxes, crescent pins, and celebration rooms.', theme:{ from:'#0f766e', to:'#fef3c7', accent:'#99f6e4' }, shopItems:['special-3'], miniGames:['snack-stack'], bonusMultiplier:1.2, badgeReward:'Eid Blessing Badge', announcement:'Eid Celebration specials are in the shop preview.' },
+  { id:'halloween', title:'Halloween', description:'Pumpkins, bat wings, manor habitats, and spooky games.', theme:{ from:'#111827', to:'#f97316', accent:'#fdba74' }, shopItems:['special-4'], miniGames:['whack-a-bug','bubble-pop'], bonusMultiplier:1.2, badgeReward:'Halloween Hero', announcement:'Halloween spooky specials are waiting.' },
+  { id:'anniversary', title:'Anniversary', description:'Heart crowns, banners, frames, and love rewards.', theme:{ from:'#be185d', to:'#f9a8d4', accent:'#fbcfe8' }, shopItems:['special-5','special-7','special-12','special-13'], miniGames:['tiny-racing'], bonusMultiplier:1.25, badgeReward:'Anniversary Love Badge', announcement:'Anniversary gifts celebrate every keeper.' },
+  { id:'christmas', title:'Christmas', description:'Snow globes, scarves, cottages, and festive rewards.', theme:{ from:'#14532d', to:'#ef4444', accent:'#dcfce7' }, shopItems:['special-6','special-14'], miniGames:['jump-rope','star-catcher'], bonusMultiplier:1.2, badgeReward:'Christmas Star Badge', announcement:'Christmas preview items are visible in Special.' },
+];
+
+export const getActiveEvent = (manualId?: string | null, weeklyEnabled = true) => seasonalEvents.find((event) => event.id === (manualId ?? 'night_festival')) ?? (weeklyEnabled ? seasonalEvents[0] : undefined);
+export const eventTitleById = (id: string) => seasonalEvents.find((event) => event.id === id)?.title ?? id;
