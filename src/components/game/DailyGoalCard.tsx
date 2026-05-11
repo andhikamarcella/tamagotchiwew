@@ -1,0 +1,2 @@
+'use client';
+export default function DailyGoalCard({ goals }: { goals?: string[] }) { const list = goals ?? ['Feed pet 2 times', 'Play once', 'Clean once', 'Keep health above 80', 'Earn 50 coins']; return <section className="pixel-border bg-white p-3"><h2 className="mb-2 text-sm">Daily Goals</h2><ul className="grid gap-1 text-[10px]">{list.map((goal) => <li key={goal}>□ {goal}</li>)}</ul></section>; }

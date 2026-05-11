@@ -1,0 +1,1 @@
+export { SharedPetPanel } from './CoupleModePage';

@@ -1,0 +1,1 @@
+export function getCareCombo(actions: string[]): { name: string; rewardCoins: number; rewardXp: number } | null { const recent = actions.slice(-3).join('|'); if (recent.includes('feed') && recent.includes('play') && recent.includes('clean')) return { name: 'Perfect Care Combo', rewardCoins: 25, rewardXp: 10 }; return null; }
