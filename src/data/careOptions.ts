@@ -1,3 +1,4 @@
+import { shopItems } from '@/lib/gameData';
 import type { CareAction, CareOption } from '@/src/types/care';
 
 export const foodOptions: CareOption[] = [
@@ -30,4 +31,58 @@ export const wakeOptions: CareOption[] = [
   { id:'wake-song', action:'wake', name:'Morning Chime', icon:'🎵', rarity:'Basic', description:'Bangun dengan chiptune lucu.', effects:{ happiness:6, energy:-2 }, unlockLevel:1 },
 ];
 
-export const careOptionsByAction: Record<CareAction, CareOption[]> = { feed:foodOptions, snack:snackOptions, play:playOptions, clean:cleanOptions, medicine:medicineOptions, pet:interactionOptions, walk:walkOptions, train:trainOptions, sleep:sleepOptions, wake:wakeOptions };
+
+function careRarity(rarity: string | undefined): CareOption['rarity'] {
+  return rarity === 'Uncommon' || rarity === 'Rare' || rarity === 'Epic' || rarity === 'Legendary' ? rarity : rarity === 'Common' ? 'Common' : 'Rare';
+}
+
+function existingNames(options: CareOption[]): Set<string> {
+  return new Set(options.flatMap((option) => [option.name, option.itemName, option.requiredToy, option.requiredTool].filter(Boolean) as string[]));
+}
+
+function shopCareOptions(category: 'Food' | 'Snacks' | 'Medicine', action: 'feed' | 'snack' | 'medicine', existing: CareOption[]): CareOption[] {
+  const seen = existingNames(existing);
+  return shopItems.filter((item) => item.category === category && !seen.has(item.name)).map((item, index) => ({
+    id: `care-${item.id}`,
+    action,
+    name: item.name,
+    icon: item.emoji,
+    rarity: careRarity(item.rarity),
+    description: item.description,
+    effects: item.statEffects ?? (action === 'medicine' ? { health: 12, energy: 2 } : action === 'snack' ? { happiness: 12, hunger: 4, xp: 3 } : { hunger: 14, happiness: 3 }),
+    itemName: item.name,
+    itemId: item.id,
+    consumesItem: true,
+    unlockLevel: Math.max(1, Math.floor(index / 5) + 1),
+  }));
+}
+
+function shopToyOptions(existing: CareOption[]): CareOption[] {
+  const seen = existingNames(existing);
+  return shopItems.filter((item) => item.category === 'Toys' && !seen.has(item.name)).map((item, index) => ({
+    id: `care-${item.id}`,
+    action: 'play' as const,
+    name: `Play ${item.name}`,
+    icon: item.emoji,
+    rarity: careRarity(item.rarity),
+    description: `Use ${item.name} from your inventory for a matching play action.`,
+    effects: item.statEffects ?? { happiness: 12, xp: 6, energy: -2 },
+    requiredToy: item.name,
+    itemId: item.id,
+    unlockLevel: Math.max(1, Math.floor(index / 5) + 1),
+    rewardCoins: index % 4 === 0 ? 4 : 0,
+  }));
+}
+
+export const careOptionsByAction: Record<CareAction, CareOption[]> = {
+  feed:[...foodOptions, ...shopCareOptions('Food', 'feed', foodOptions)],
+  snack:[...snackOptions, ...shopCareOptions('Snacks', 'snack', snackOptions)],
+  play:[...playOptions, ...shopToyOptions(playOptions)],
+  clean:cleanOptions,
+  medicine:[...medicineOptions, ...shopCareOptions('Medicine', 'medicine', medicineOptions)],
+  pet:interactionOptions,
+  walk:walkOptions,
+  train:trainOptions,
+  sleep:sleepOptions,
+  wake:wakeOptions,
+};
