@@ -1,0 +1,3 @@
+export type RandomEvent = { type: 'coin' | 'item' | 'reaction' | 'weather'; message: string; coins?: number; itemId?: string };
+export function maybeRandomEvent(chance: number): boolean { return Math.random() < Math.max(0, Math.min(1, chance)); }
+export function rollRandomEvent(): RandomEvent | null { if (!maybeRandomEvent(0.18)) return null; const events: RandomEvent[] = [{ type: 'coin', message: 'Found shiny floor coins!', coins: 8 }, { type: 'reaction', message: 'Your pet did a cute pixel spin!' }, { type: 'item', message: 'Found a tiny ribbon!', itemId: 'ribbon' }, { type: 'weather', message: 'The room weather shifted.' }]; return events[Math.floor(Math.random() * events.length)] ?? null; }

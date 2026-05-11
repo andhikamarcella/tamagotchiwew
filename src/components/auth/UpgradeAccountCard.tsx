@@ -1,0 +1,2 @@
+'use client';
+export default function UpgradeAccountCard({ onOpen }: { onOpen: () => void }) { return <section className="pixel-border bg-yellow-100 p-3"><h2 className="mb-2 text-sm">Guest Trial</h2><p className="mb-3 text-[10px] leading-relaxed">Save progress permanently by linking an account.</p><button type="button" onClick={onOpen} className="pixel-border-sm w-full bg-white px-3 py-2 text-[10px]">Save progress with an account</button></section>; }
