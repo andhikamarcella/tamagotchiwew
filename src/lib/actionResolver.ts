@@ -46,9 +46,12 @@ export function applyCareOption(pet: Pet, option: CareOption, inventory: Invento
   const disliked = option.dislikedSpecies?.includes(animal.species) ?? false;
   const bonus = favorite ? 5 : disliked ? -4 : 0;
   const effects = { ...option.effects };
-  effects.happiness = (effects.happiness ?? 0) + bonus;
-  effects.xp = (effects.xp ?? 0) + (favorite ? 4 : 0);
-  const basePet = { ...pet, isSleeping: option.action === 'sleep' ? true : option.action === 'wake' ? false : pet.isSleeping };
+  const personality = pet.personality ?? pet.trait;
+  effects.happiness = (effects.happiness ?? 0) + bonus + (personality === 'Foodie' && favorite && ['feed','snack'].includes(option.action) ? 4 : 0);
+  effects.xp = (effects.xp ?? 0) + (favorite ? 4 : 0) + (personality === 'Playful' && option.action === 'play' ? 5 : 0) + (personality === 'Brave' && option.action === 'train' ? 5 : 0);
+  effects.energy = (effects.energy ?? 0) + (personality === 'Sleepy' && option.action === 'sleep' ? 8 : 0) - (personality === 'Sleepy' && ['play','walk','train'].includes(option.action) ? 2 : 0);
+  effects.affection = (effects.affection ?? 0) + (personality === 'Shy' && option.action === 'pet' ? 4 : 0) + (personality === 'Loyal' ? 1 : 0);
+  const basePet = { ...pet, bondXp: Math.min(100, (pet.bondXp ?? pet.stats.affection) + (favorite ? 3 : 1)), isSleeping: option.action === 'sleep' ? true : option.action === 'wake' ? false : pet.isSleeping };
   const countedPet = { ...basePet, actionCounts: { ...basePet.actionCounts, [option.action]: (basePet.actionCounts[option.action] ?? 0) + 1 } };
   const levelled = levelPet(applyStats(countedPet, effects));
   const spent = option.coinCost ?? 0;
