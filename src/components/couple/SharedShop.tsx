@@ -1,0 +1,1 @@
+export { SharedShop } from './CoupleModePage';

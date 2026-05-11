@@ -1,0 +1,2 @@
+'use client';
+export default function PetRequestCard({ request, onFulfill }: { request: string; onFulfill: () => void }) { return <section className="pixel-border bg-white p-3"><h2 className="mb-2 text-sm">Pet Request</h2><p className="text-[10px] leading-relaxed">{request}</p><button type="button" onClick={onFulfill} className="pixel-border-sm mt-3 bg-lime-100 px-3 py-2 text-[10px]">Try to fulfill</button></section>; }
