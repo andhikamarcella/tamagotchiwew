@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import './globals.css';
 import { Analytics } from '@/src/vendor/vercel-analytics/next';
+import ServiceWorkerRegistrar from '@/src/components/system/ServiceWorkerRegistrar';
 
 export const metadata: Metadata = {
   title: 'Pixel Paws',
@@ -16,7 +17,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
       </head>
-      <body className="bg-slate-950 font-pixel text-slate-950 antialiased">{children}<Analytics /></body>
+      <body className="bg-slate-950 font-pixel text-slate-950 antialiased"><ServiceWorkerRegistrar />{children}<Analytics /></body>
     </html>
   );
 }
