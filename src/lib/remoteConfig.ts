@@ -49,6 +49,21 @@ export async function fetchGameRemoteConfig(): Promise<RemoteConfigSnapshot> {
       guest_trial_minutes: readNumber(remote.getValue(rc, 'guest_trial_minutes').asString(), DEFAULT_REMOTE_CONFIG.guest_trial_minutes),
       min_supported_version: remote.getValue(rc, 'min_supported_version').asString() || DEFAULT_REMOTE_CONFIG.min_supported_version,
       latest_version: remote.getValue(rc, 'latest_version').asString() || DEFAULT_REMOTE_CONFIG.latest_version,
+      version_label: remote.getValue(rc, 'version_label').asString() || DEFAULT_REMOTE_CONFIG.version_label,
+      release_channel: remote.getValue(rc, 'release_channel').asString() || DEFAULT_REMOTE_CONFIG.release_channel,
+      seasonal_event_override_enabled: remote.getValue(rc, 'seasonal_event_override_enabled').asString() === '' ? DEFAULT_REMOTE_CONFIG.seasonal_event_override_enabled : readBoolean(remote.getValue(rc, 'seasonal_event_override_enabled').asString()),
+      seasonal_event_active_id: remote.getValue(rc, 'seasonal_event_active_id').asString() || DEFAULT_REMOTE_CONFIG.seasonal_event_active_id,
+      seasonal_event_title: remote.getValue(rc, 'seasonal_event_title').asString() || DEFAULT_REMOTE_CONFIG.seasonal_event_title,
+      seasonal_event_message: remote.getValue(rc, 'seasonal_event_message').asString() || DEFAULT_REMOTE_CONFIG.seasonal_event_message,
+      seasonal_event_start: remote.getValue(rc, 'seasonal_event_start').asString() || DEFAULT_REMOTE_CONFIG.seasonal_event_start,
+      seasonal_event_end: remote.getValue(rc, 'seasonal_event_end').asString() || DEFAULT_REMOTE_CONFIG.seasonal_event_end,
+      reward_multiplier: readNumber(remote.getValue(rc, 'reward_multiplier').asString(), DEFAULT_REMOTE_CONFIG.reward_multiplier),
+      ramadan_enabled: remote.getValue(rc, 'ramadan_enabled').asString() === '' ? DEFAULT_REMOTE_CONFIG.ramadan_enabled : readBoolean(remote.getValue(rc, 'ramadan_enabled').asString()),
+      ramadan_start: remote.getValue(rc, 'ramadan_start').asString() || DEFAULT_REMOTE_CONFIG.ramadan_start,
+      ramadan_end: remote.getValue(rc, 'ramadan_end').asString() || DEFAULT_REMOTE_CONFIG.ramadan_end,
+      eid_enabled: remote.getValue(rc, 'eid_enabled').asString() === '' ? DEFAULT_REMOTE_CONFIG.eid_enabled : readBoolean(remote.getValue(rc, 'eid_enabled').asString()),
+      eid_start: remote.getValue(rc, 'eid_start').asString() || DEFAULT_REMOTE_CONFIG.eid_start,
+      eid_end: remote.getValue(rc, 'eid_end').asString() || DEFAULT_REMOTE_CONFIG.eid_end,
     });
     return { config: next, status: 'loaded', lastFetchAt: Date.now() };
   } catch (error) {

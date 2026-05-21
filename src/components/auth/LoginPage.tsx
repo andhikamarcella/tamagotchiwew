@@ -56,6 +56,13 @@ export default function LoginPage() {
     if (auth.error) showToast(auth.error, auth.error.includes('succeeded') ? 'warning' : 'error');
   }, [auth.error, showToast]);
 
+  useEffect(() => {
+    const resetMessage = window.localStorage.getItem('pixel-paws-reset-toast');
+    if (!resetMessage) return;
+    window.localStorage.removeItem('pixel-paws-reset-toast');
+    showToast(resetMessage, 'success');
+  }, [showToast]);
+
   const requireFirebase = () => {
     if (configured) return true;
     showToast('Firebase is not configured.', 'warning');
@@ -110,8 +117,9 @@ export default function LoginPage() {
         <div className="mx-auto w-full max-w-lg rounded-[2rem] border-4 border-slate-950 bg-white/95 p-4 shadow-[8px_8px_0_#0f172a] backdrop-blur sm:p-6">
           <div className="mb-5">
             <div className="mb-3 inline-flex items-center gap-2 rounded-full border-2 border-slate-950 bg-lime-100 px-3 py-1 text-[9px] uppercase tracking-[0.2em]"><span>🐾</span><span>Pixel Paws</span></div>
-            <h2 className="text-2xl leading-relaxed">Sign in to play</h2>
-            <p className="mt-2 text-[10px] leading-relaxed text-slate-600">Save your pets, invite friends, and play together.</p>
+            <h2 className="text-3xl leading-tight tracking-wider text-slate-950">PIXEL PAWS</h2>
+            <p className="mt-2 text-[10px] font-semibold leading-relaxed text-slate-700">Sign in to save your pets, invite friends, and play together.</p>
+            <div className="mt-3 rounded-2xl border-4 border-slate-950 bg-lime-100 p-3 text-[10px] font-semibold text-slate-950 shadow-[3px_3px_0_#0f172a]" aria-live="polite">Auth screen ready — choose Google, Microsoft, Email, or Guest mode.</div>
           </div>
           {!configured && <div className="mb-4 rounded-2xl border-4 border-slate-950 bg-yellow-100 p-3 text-[10px] leading-relaxed">Firebase is not configured. Add env vars and redeploy to enable online login.</div>}
           <div className="grid gap-3">

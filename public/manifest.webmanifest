@@ -1,0 +1,21 @@
+{
+  "name": "Pixel Paws",
+  "short_name": "Pixel Paws",
+  "description": "8-bit pet care game with offline support, quests, and real mini games.",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "browser"],
+  "background_color": "#0f172a",
+  "theme_color": "#bef264",
+  "orientation": "portrait-primary",
+  "categories": ["games", "entertainment"],
+  "icons": [
+    { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" },
+    { "src": "/favicon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }
+  ],
+  "shortcuts": [
+    { "name": "Care Pet", "short_name": "Care", "url": "/?shortcut=care", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] },
+    { "name": "Mini Games", "short_name": "Games", "url": "/?shortcut=games", "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml" }] }
+  ]
+}

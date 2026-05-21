@@ -49,7 +49,7 @@ Tidak perlu backend custom, API route, Firebase Hosting, Firebase Admin SDK, ser
    - Tambahkan custom domain jika ada.
    - Untuk lokal, pastikan `localhost` tetap ada.
 8. Enable Firestore Database.
-9. Paste isi `firebase/firestore.rules` ke tab Firestore Rules lalu publish.
+9. Paste isi `firebase/firestore.rules` ke tab Firestore Rules lalu publish. Publish ulang rules setiap ada update koleksi save seperti memorial, clinic visits, safety items, dan seasonal content.
 10. Buka **Vercel Project Settings > Environment Variables**.
 11. Isi env berikut:
 
