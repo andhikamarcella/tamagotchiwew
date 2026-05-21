@@ -56,6 +56,13 @@ export default function LoginPage() {
     if (auth.error) showToast(auth.error, auth.error.includes('succeeded') ? 'warning' : 'error');
   }, [auth.error, showToast]);
 
+  useEffect(() => {
+    const resetMessage = window.localStorage.getItem('pixel-paws-reset-toast');
+    if (!resetMessage) return;
+    window.localStorage.removeItem('pixel-paws-reset-toast');
+    showToast(resetMessage, 'success');
+  }, [showToast]);
+
   const requireFirebase = () => {
     if (configured) return true;
     showToast('Firebase is not configured.', 'warning');

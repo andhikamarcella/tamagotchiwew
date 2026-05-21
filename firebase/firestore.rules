@@ -94,7 +94,7 @@ service cloud.firestore {
       match /dailyGoals/{docId} { allow read, create, update, delete: if isOwner(uid); }
       match /weeklyQuests/{docId} { allow read, create, update, delete: if isOwner(uid); }
       match /notifications/{docId} { allow read, create, update, delete: if isOwner(uid); }
-      match /notificationTokens/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /notificationTokens/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
       match /collection/{docId} { allow read, create, update, delete: if isOwner(uid); }
       match /mailbox/{docId} { allow read, create, update, delete: if isOwner(uid); }
       match /roomDecor/{docId} { allow read, create, update, delete: if isOwner(uid); }
@@ -109,6 +109,16 @@ service cloud.firestore {
       match /singlePlayerState/{docId} { allow read, create, update, delete: if isOwner(uid); }
       match /usedCheatCodes/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
       match /dailyLimits/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
+      match /keepsakes/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /careCalendar/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /moodTimeline/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /skillTree/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /training/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /clinicVisits/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /illnessHistory/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /reviveHistory/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
+      match /petJournal/{docId} { allow read, create, update, delete: if isOwner(uid); }
+      match /safetyItems/{docId} { allow read, create, update: if isOwner(uid); allow delete: if false; }
       match /pushCooldowns/{docId} { allow read: if isOwner(uid); allow create, update, delete: if false; }
       match /friends/{friendUid} { allow read, create, update, delete: if isOwner(uid); }
       match /friendRequests/{requestId} { allow read, create, update, delete: if isOwner(uid); }

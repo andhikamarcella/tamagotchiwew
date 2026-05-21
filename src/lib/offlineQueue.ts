@@ -22,7 +22,15 @@ export type OfflineQueueType =
   | 'mini_game_result'
   | 'cheat_code_update'
   | 'badge_update'
-  | 'album_update';
+  | 'album_update'
+  | 'clinic_visit'
+  | 'illness_update'
+  | 'revive_history'
+  | 'safety_item'
+  | 'care_calendar'
+  | 'mood_timeline'
+  | 'training_update'
+  | 'pet_journal';
 
 export type OfflineQueueStatus = 'pending' | 'failed_permission' | 'failed_invalid' | 'retry_later';
 
@@ -222,6 +230,22 @@ function targetForItem(uid: string, item: OfflineQueueItem): QueueTarget | null 
       return { path: ['users', uid, 'badges', cleanDocId(payload.badgeId, item.id)], data: base };
     case 'album_update':
       return { path: ['users', uid, 'album', cleanDocId(payload.momentId, item.id)], data: base };
+    case 'clinic_visit':
+      return { path: ['users', uid, 'clinicVisits', cleanDocId(payload.visitId, item.id)], data: base };
+    case 'illness_update':
+      return { path: ['users', uid, 'illnessHistory', cleanDocId(payload.illnessId, item.id)], data: base };
+    case 'revive_history':
+      return { path: ['users', uid, 'reviveHistory', cleanDocId(payload.reviveId, item.id)], data: base };
+    case 'safety_item':
+      return { path: ['users', uid, 'safetyItems', cleanDocId(payload.safetyItemId, item.id)], data: base };
+    case 'care_calendar':
+      return { path: ['users', uid, 'careCalendar', cleanDocId(payload.dateId, item.id)], data: base };
+    case 'mood_timeline':
+      return { path: ['users', uid, 'moodTimeline', cleanDocId(payload.eventId, item.id)], data: base };
+    case 'training_update':
+      return { path: ['users', uid, 'training', cleanDocId(payload.commandId, item.id)], data: base };
+    case 'pet_journal':
+      return { path: ['users', uid, 'petJournal', cleanDocId(payload.entryId, item.id)], data: base };
     default:
       return null;
   }
