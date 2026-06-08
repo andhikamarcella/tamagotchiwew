@@ -5,20 +5,25 @@ import ServiceWorkerRegistrar from '@/src/components/system/ServiceWorkerRegistr
 
 export const metadata: Metadata = {
   title: 'Pixel Paws',
-  description: '8-bit animal tamagotchi game.',
-  manifest: '/manifest.webmanifest',
+  description: 'A cozy virtual pet game with breeding, events, pet care, couple mode, seasonal rewards, mini games, and cute Pixel Paws adventures.',
+  manifest: '/manifest.json',
   applicationName: 'Pixel Paws',
-  appleWebApp: { capable: true, title: 'Pixel Paws', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'Pixel Paws', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
-  icons: { icon: '/favicon.svg', shortcut: '/favicon.svg', apple: '/icon.svg' },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+    apple: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+  },
 };
 
-export const viewport: Viewport = { themeColor: '#bef264' };
+export const viewport: Viewport = { themeColor: '#67e8f9' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="id">
       <head>
+        <link rel="manifest" href="/manifest.json" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Pixelify+Sans:wght@400..700&display=swap" rel="stylesheet" />
