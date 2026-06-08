@@ -1,38 +1,12 @@
 {
-  "name": "Pixel Paws",
-  "short_name": "Pixel Paws",
-  "description": "A cozy virtual pet game with breeding, events, pet care, couple mode, and seasonal rewards.",
-  "start_url": "/",
-  "scope": "/",
-  "display": "standalone",
-  "orientation": "portrait",
-  "theme_color": "#67e8f9",
   "background_color": "#ffffff",
-  "categories": ["games", "entertainment", "lifestyle"],
-  "icons": [
-    {
-      "src": "/icons/icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "any"
-    },
-    {
-      "src": "/icons/maskable-icon-192.png",
-      "sizes": "192x192",
-      "type": "image/png",
-      "purpose": "maskable"
-    },
-    {
-      "src": "/icons/maskable-icon-512.png",
-      "sizes": "512x512",
-      "type": "image/png",
-      "purpose": "maskable"
-    }
-  ]
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Pixel Paws",
+  "orientation": "any",
+  "scope": "/",
+  "short_name": "Pixel Paws",
+  "start_url": "/",
+  "theme_color": "#ffffff",
+  "id": "/"
 }
