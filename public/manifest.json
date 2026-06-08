@@ -2,11 +2,10 @@
   "background_color": "#ffffff",
   "dir": "ltr",
   "display": "standalone",
-  "name": "Pixel Paws",
+  "name": "pxlpaws.vercel",
   "orientation": "any",
   "scope": "/",
-  "short_name": "Pixel Paws",
+  "short_name": "pxlpaws.vercel",
   "start_url": "/",
-  "theme_color": "#ffffff",
-  "id": "/"
+  "theme_color": "#ffffff"
 }
