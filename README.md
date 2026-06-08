@@ -251,3 +251,23 @@ If enabling notifications still fails with `messaging/token-subscribe-failed` or
 - Ensure API restrictions allow Firebase Cloud Messaging API and Firebase Installations API, or leave the key unrestricted during testing.
 - Redeploy after changing env vars and clear old site/service-worker data if the browser keeps stale workers.
 - Never put service account JSON, server keys, or Firebase Admin credentials in the frontend.
+
+## Pixel Paws v2.0 Major Update
+
+Version 2.0 adds a versioned/idempotent save migration pipeline (current save version **6**), five-slot local backup guard, validator/repair log, global recovery UI, personality gameplay rules, breeding and hatching, safe pet revival, variant collection, skill points, v2 news/changelog, development QA pages, and Firebase-safe fallbacks. Existing `pixel-pals-save-v1` data is preserved and migrated in place; the storage key intentionally remains unchanged.
+
+### Save migration and backup
+
+Old saves without `saveVersion` are treated as v1. Migrations add diary/mood memory (v2), skill data (v3), backup metadata (v4), eggs/variants/revival (v5), and news/cloud metadata (v6). Migration only fills missing fields. Before migration, import, reset, and corrupt-save recovery, Pixel Paws keeps a metadata-rich local backup. Automatic backup runs every four minutes and retains at most five snapshots. Recovery actions can reload, restore the newest healthy backup, export the broken JSON, or reset safely after another backup.
+
+### Firebase and cloud-safe behavior
+
+Single-player always works from LocalStorage. If Firebase environment variables are missing, Couple Mode, remote events/news, and cloud sync remain disabled with setup notices instead of throwing. Cloud saves should use `users/{uid}/singlePlayerSave/main`; remote content can use `remoteConfig/global`, `events/{eventId}`, and `news/{newsId}`; couple data remains under `coupleRooms/{roomId}`. Expected Firestore rules version: **5**. If Couple Mode or remote events return permission denied, publish the repository rules with `firebase deploy --only firestore:rules`.
+
+See [`docs/remote-config.md`](docs/remote-config.md) for validated Eid and Ramadan examples and [`docs/v2-architecture.md`](docs/v2-architecture.md) for save, backup, QA, and cloud conflict guidance.
+
+### QA routes
+
+- `/debug` is available only while `NODE_ENV=development` and provides safe local simulations.
+- `/qa` is a hidden manual acceptance checklist.
+- Run `npm run check` before release.
