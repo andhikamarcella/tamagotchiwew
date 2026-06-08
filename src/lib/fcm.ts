@@ -78,7 +78,7 @@ export async function requestFcmToken(): Promise<string> {
 
   let registration: ServiceWorkerRegistration;
   try {
-    registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+    registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
     await navigator.serviceWorker.ready;
     await registration.update();
   } catch (error) {

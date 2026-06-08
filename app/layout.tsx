@@ -5,15 +5,19 @@ import ServiceWorkerRegistrar from '@/src/components/system/ServiceWorkerRegistr
 
 export const metadata: Metadata = {
   title: 'Pixel Paws',
-  description: '8-bit animal tamagotchi game.',
-  manifest: '/manifest.webmanifest',
+  description: 'A cozy virtual pet game with breeding, events, pet care, couple mode, and seasonal rewards.',
+  manifest: '/manifest.json',
   applicationName: 'Pixel Paws',
-  appleWebApp: { capable: true, title: 'Pixel Paws', statusBarStyle: 'black-translucent' },
+  appleWebApp: { capable: true, title: 'Pixel Paws', statusBarStyle: 'default' },
   formatDetection: { telephone: false },
-  icons: { icon: '/favicon.svg', shortcut: '/favicon.svg', apple: '/icon.svg' },
+  icons: {
+    icon: [{ url: '/favicon.svg', type: 'image/svg+xml' }],
+    shortcut: '/favicon.svg',
+    apple: [{ url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' }],
+  },
 };
 
-export const viewport: Viewport = { themeColor: '#bef264' };
+export const viewport: Viewport = { themeColor: '#67e8f9' };
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
