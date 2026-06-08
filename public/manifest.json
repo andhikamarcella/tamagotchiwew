@@ -1,0 +1,16 @@
+{
+  "background_color": "#ffffff",
+  "dir": "ltr",
+  "display": "standalone",
+  "name": "Pixel Paws",
+  "orientation": "portrait",
+  "scope": "/",
+  "short_name": "Pixel Paws",
+  "start_url": "/",
+  "theme_color": "#67e8f9",
+  "description": "A cozy virtual pet game with breeding, events, pet care, couple mode, seasonal rewards, mini games, and cute Pixel Paws adventures.",
+  "categories": [
+    "games"
+  ],
+  "lang": "en"
+}
