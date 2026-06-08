@@ -11,12 +11,14 @@
   "lang": "en",
   "theme_color": "#67e8f9",
   "background_color": "#ffffff",
-  "categories": [
-    "games",
-    "entertainment",
-    "lifestyle"
-  ],
+  "categories": ["games", "entertainment", "lifestyle"],
   "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
     {
       "src": "/icon.svg",
       "sizes": "any",
