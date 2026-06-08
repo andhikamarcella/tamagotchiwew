@@ -19,7 +19,7 @@ export function useFcmNotifications(uid: string | null, onToast?: (message: stri
   useEffect(() => {
     if (typeof window !== 'undefined' && 'Notification' in window) setPermission(Notification.permission);
     if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-      void navigator.serviceWorker.getRegistrations().then((regs) => setServiceWorkerRegistered(regs.some((reg) => reg.active?.scriptURL.includes('firebase-messaging-sw.js') || reg.scope === `${window.location.origin}/`))).catch(() => setServiceWorkerRegistered(false));
+      void navigator.serviceWorker.getRegistrations().then((regs) => setServiceWorkerRegistered(regs.some((reg) => reg.active?.scriptURL.includes('/sw.js') || reg.active?.scriptURL.includes('firebase-messaging-sw.js') || reg.scope === `${window.location.origin}/`))).catch(() => setServiceWorkerRegistered(false));
     }
   }, []);
 
