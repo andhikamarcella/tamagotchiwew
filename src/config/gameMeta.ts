@@ -1,10 +1,22 @@
-export const GAME_VERSION = '1.0.0';
-export const GAME_VERSION_LABEL = 'Beta Launch';
-export const RELEASE_CHANNEL = 'beta';
-export const GAME_BUILD_DATE = '2026-05-21';
+export const GAME_VERSION = '2.0.0';
+export const GAME_VERSION_LABEL = 'Major Update';
+export const RELEASE_CHANNEL = 'stable';
+export const GAME_BUILD_DATE = '2026-06-08';
 export const GAME_NAME = 'Pixel Paws';
 
 export const CHANGELOG = [
+  {
+    version: 'v2.0.0 - Major Update',
+    date: '2026-06-08',
+    title: 'Pixel Paws v2.0',
+    changes: [
+      'Pet Personality gameplay effects', 'Egg & Breeding System', 'Pet Variants / Shiny', 'Revive System',
+      'Event Calendar & Login Streak', 'Expanded Errands / Pet Jobs', 'Crafting Expansion', 'Skill Tree',
+      'Weekly Tournament', 'Emotional Pet Diary', 'Save Backup Guard', 'Save Migration', 'Error Recovery',
+      'Cloud Sync and Conflict Resolver foundations', 'Smart Warnings', 'Inventory Filter', 'Couple Daily Check-in safety',
+      'QA/Debug Tools', 'Firebase Remote Event Guide'
+    ],
+  },
   {
     version: 'v1.0.0 - Beta Launch',
     date: '2026-05-21',
@@ -64,6 +76,11 @@ export const CHANGELOG = [
   { version: '0.2.0', date: '2026-05-01', title: 'Care Update', changes: ['Added detailed care options.', 'Expanded shop items.', 'Improved save import/export.'] },
 ] as const;
 export const ANNOUNCEMENTS = [
+  {
+    id: 'pixel-paws-v2-major-update', title: 'Pixel Paws v2.0 Major Update!',
+    message: 'Safer saves, backups, personality effects, eggs, variants, revival, jobs, events, news, and friendly cloud fallbacks have arrived.',
+    type: 'info', active: true, version: '2.0.0', badge: 'New v2.0'
+  },
   {
     id: 'beta-launch-life-events-1-0-0',
     title: 'Pixel Paws v1.0.0 Beta is Here!',

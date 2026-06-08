@@ -9,7 +9,7 @@ export default function ServiceWorkerRegistrar() {
 
     const register = async () => {
       try {
-        const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', { scope: '/' });
+        const registration = await navigator.serviceWorker.register('/sw.js', { scope: '/' });
         if (!cancelled) await registration.update().catch(() => undefined);
       } catch (error) {
         if (process.env.NODE_ENV === 'development') console.warn('Pixel Paws service worker registration failed:', error);
